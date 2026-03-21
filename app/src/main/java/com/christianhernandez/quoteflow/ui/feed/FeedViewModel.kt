@@ -100,12 +100,8 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
         }
 
         viewModelScope.launch {
-            // Right swipe = save
-            if (direction == SwipeDirection.RIGHT && !current.isSaved) {
-                repository.saveQuote(current)
-            }
-
             // Record swipe to API (fire-and-forget)
+            // Note: saving is done via bookmark button, not swipe direction
             repository.recordSwipe(
                 quoteId = current.id,
                 direction = directionStr,

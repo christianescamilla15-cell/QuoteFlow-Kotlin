@@ -1,6 +1,7 @@
 package com.christianhernandez.quoteflow.ui.feed
 
 import android.content.Intent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -263,59 +264,46 @@ fun FeedScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Left hint
-            Text(
-                text = if (language == "es") "Reflexion" else "Reflection",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-            )
-            // Center hints
+            // Left hint — Reflection
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "←", style = MaterialTheme.typography.labelMedium, color = Color(0xFFF97316).copy(alpha = 0.6f))
                 Text(
-                    text = if (language == "es") "Estoicismo" else "Stoicism",
+                    text = if (language == "es") "Reflexión" else "Reflection",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwipeLeft,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(14.dp)
-                            .alpha(0.35f),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (language == "es") "Desliza" else "Swipe",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Default.SwipeRight,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(14.dp)
-                            .alpha(0.35f),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = if (language == "es") "Filosofia" else "Philosophy",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                    color = Color(0xFFF97316).copy(alpha = 0.5f),
                 )
             }
-            // Right hint
-            Text(
-                text = if (language == "es") "Disciplina" else "Discipline",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-            )
+            // Center — Up (Stoicism) + Down (Philosophy)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "↑", style = MaterialTheme.typography.labelMedium, color = Color(0xFF3B82F6).copy(alpha = 0.6f))
+                Text(
+                    text = if (language == "es") "Sabiduría" else "Wisdom",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF3B82F6).copy(alpha = 0.5f),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (language == "es") "Desliza en 4 direcciones" else "Swipe in 4 directions",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (language == "es") "Filosofía" else "Philosophy",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF8B5CF6).copy(alpha = 0.5f),
+                )
+                Text(text = "↓", style = MaterialTheme.typography.labelMedium, color = Color(0xFF8B5CF6).copy(alpha = 0.6f))
+            }
+            // Right hint — Discipline
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "→", style = MaterialTheme.typography.labelMedium, color = Color(0xFF10B981).copy(alpha = 0.6f))
+                Text(
+                    text = if (language == "es") "Disciplina" else "Discipline",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF10B981).copy(alpha = 0.5f),
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
