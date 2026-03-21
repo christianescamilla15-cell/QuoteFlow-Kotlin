@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -253,14 +254,16 @@ fun QuoteCard(
                     textAlign = TextAlign.Start,
                 )
 
-                // Quote text — serif style, centered
+                // Quote text — serif italic, elegant
                 Text(
                     text = quote.text,
                     fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
                     fontSize = 18.sp,
-                    lineHeight = (18 * 1.6).sp,
+                    lineHeight = (18 * 1.7).sp,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = 0.3.sp,
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
 
