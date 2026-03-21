@@ -172,7 +172,14 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
                 dwellTimeMs = dwellTimeMs,
             )
 
-            loadNextQuote()
+            // Map direction to the category the user WANTS to see next
+            val nextCategory = when (direction) {
+                SwipeDirection.UP -> "stoicism"
+                SwipeDirection.RIGHT -> "discipline"
+                SwipeDirection.LEFT -> "reflection"
+                SwipeDirection.DOWN -> "philosophy"
+            }
+            loadNextQuoteByCategory(nextCategory)
             _uiState.update {
                 val newCount = it.swipeCount + 1
                 it.copy(
@@ -238,11 +245,27 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
         _uiState.update { it.copy(showPaywall = false) }
     }
 
-    private fun loadNextQuote() {
+    /**
+     * Load next quote matching the requested category.
+     * If no match in queue, falls back to any available quote.
+     * The swipe direction determines what category appears next:
+     * UP=stoicism, RIGHT=discipline, LEFT=reflection, DOWN=philosophy
+     */
+    private fun loadNextQuoteByCategory(category: String) {
         _uiState.update { state ->
             val queue = state.feedQueue.toMutableList()
-            val newCurrent = state.nextQuote
-            val newNext = queue.removeFirstOrNull()
+
+            // Find a quote matching the requested category
+            val matchIndex = queue.indexOfFirst { it.category == category }
+            val newCurrent = if (matchIndex >= 0) {
+                queue.removeAt(matchIndex)
+            } else {
+                // Fallback: take any quote from queue
+                queue.removeFirstOrNull()
+            }
+
+            // For next preview, try to pick a different category for variety
+            val newNext = queue.firstOrNull()
 
             // If queue is running low (< 5 quotes), fetch more
             if (queue.size < 5) {
