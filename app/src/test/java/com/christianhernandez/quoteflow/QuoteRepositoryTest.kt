@@ -24,7 +24,7 @@ class QuoteRepositoryTest {
     @Before
     fun setup() {
         fakeDao = FakeQuoteDao()
-        repository = QuoteRepository(fakeDao)
+        repository = QuoteRepository(fakeDao, null)
     }
 
     @Test

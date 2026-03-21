@@ -20,13 +20,15 @@ import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -38,9 +40,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.christianhernandez.quoteflow.ui.theme.DisciplineColor
+import com.christianhernandez.quoteflow.ui.theme.PhilosophyColor
+import com.christianhernandez.quoteflow.ui.theme.ReflectionColor
+import com.christianhernandez.quoteflow.ui.theme.StoicismColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +116,52 @@ fun ProfileScreen(
                     value = uiState.totalQuotes.toString(),
                     modifier = Modifier.weight(1f),
                 )
+            }
+
+            // Philosophy Map section
+            if (uiState.mapScores != null) {
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Text(
+                    text = if (language == "es") "Mapa Filosofico" else "Philosophy Map",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        val scores = uiState.mapScores!!
+                        MapScoreRow(
+                            label = if (language == "es") "Sabiduria" else "Wisdom",
+                            score = scores.wisdom ?: 0,
+                            color = StoicismColor,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MapScoreRow(
+                            label = if (language == "es") "Disciplina" else "Discipline",
+                            score = scores.discipline ?: 0,
+                            color = DisciplineColor,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MapScoreRow(
+                            label = if (language == "es") "Reflexion" else "Reflection",
+                            score = scores.reflection ?: 0,
+                            color = ReflectionColor,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MapScoreRow(
+                            label = if (language == "es") "Filosofia" else "Philosophy",
+                            score = scores.philosophy ?: 0,
+                            color = PhilosophyColor,
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -241,6 +294,42 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(100.dp))
         }
+    }
+}
+
+@Composable
+private fun MapScoreRow(
+    label: String,
+    score: Int,
+    color: androidx.compose.ui.graphics.Color,
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "$score",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = color,
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = (score / 100f).coerceIn(0f, 1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
+            color = color,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
     }
 }
 

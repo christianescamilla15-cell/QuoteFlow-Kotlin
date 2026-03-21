@@ -22,7 +22,21 @@ class VaultViewModel(private val repository: QuoteRepository) : ViewModel() {
     val uiState: StateFlow<VaultUiState> = _uiState.asStateFlow()
 
     init {
+        syncVault()
         observeSavedQuotes()
+    }
+
+    /**
+     * Sync vault from the API on startup, then observe local Room data.
+     */
+    private fun syncVault() {
+        viewModelScope.launch {
+            try {
+                repository.syncVaultFromApi()
+            } catch (_: Exception) {
+                // Silently fall back to local data
+            }
+        }
     }
 
     private fun observeSavedQuotes() {

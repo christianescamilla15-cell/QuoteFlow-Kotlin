@@ -32,7 +32,7 @@ class FeedViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         fakeDao = FakeQuoteDao()
-        repository = QuoteRepository(fakeDao)
+        repository = QuoteRepository(fakeDao, null)
         viewModel = FeedViewModel(repository)
     }
 

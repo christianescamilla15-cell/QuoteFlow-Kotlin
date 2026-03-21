@@ -58,7 +58,7 @@ fun QuoteFlowNavHost(
     // Shared ViewModels
     val feedViewModel: FeedViewModel = viewModel(factory = FeedViewModel.Factory(app.repository))
     val vaultViewModel: VaultViewModel = viewModel(factory = VaultViewModel.Factory(app.repository))
-    val challengeViewModel: ChallengeViewModel = viewModel(factory = ChallengeViewModel.Factory())
+    val challengeViewModel: ChallengeViewModel = viewModel(factory = ChallengeViewModel.Factory(app.repository))
     val profileViewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory(app.repository))
 
     val feedState by feedViewModel.uiState.collectAsState()

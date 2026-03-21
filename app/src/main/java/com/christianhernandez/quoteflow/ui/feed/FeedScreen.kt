@@ -16,10 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.SwipeLeft
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -92,6 +94,62 @@ fun FeedScreen(
             contentAlignment = Alignment.Center,
         ) {
             when {
+                // Cold start / connecting state
+                uiState.isConnecting -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (language == "es") {
+                                "Conectando al servidor..."
+                            } else {
+                                "Connecting to server..."
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (language == "es") {
+                                "(primera conexion puede tardar hasta 30 segundos)"
+                            } else {
+                                "(first connection may take up to 30 seconds)"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 32.dp),
+                        )
+                    }
+                }
+
+                // Error state
+                uiState.errorMessage != null && uiState.currentQuote == null -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (language == "es") "Error de conexion" else "Connection error",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { viewModel.retry() }) {
+                            Text(if (language == "es") "Reintentar" else "Retry")
+                        }
+                    }
+                }
+
+                // Loading (non-connecting, e.g. refetch)
                 uiState.isLoading -> {
                     CircularProgressIndicator()
                 }

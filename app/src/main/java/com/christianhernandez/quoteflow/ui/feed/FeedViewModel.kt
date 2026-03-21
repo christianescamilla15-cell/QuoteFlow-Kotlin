@@ -16,9 +16,12 @@ data class FeedUiState(
     val currentQuote: Quote? = null,
     val nextQuote: Quote? = null,
     val isLoading: Boolean = true,
+    val isConnecting: Boolean = false,
+    val errorMessage: String? = null,
     val swipeCount: Int = 0,
     val savedCount: Int = 0,
     val feedQueue: List<Quote> = emptyList(),
+    val currentCardAppearedAt: Long = 0L,
 )
 
 class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
@@ -43,22 +46,35 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
     fun loadFeed(lang: String) {
         currentLang = lang
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val quotes = repository.getFeed(lang)
-            if (quotes.isNotEmpty()) {
-                val queue = quotes.toMutableList()
-                val current = queue.removeFirstOrNull()
-                val next = queue.removeFirstOrNull()
+            _uiState.update { it.copy(isLoading = true, isConnecting = true, errorMessage = null) }
+            try {
+                val quotes = repository.getFeed(lang)
+                if (quotes.isNotEmpty()) {
+                    val queue = quotes.toMutableList()
+                    val current = queue.removeFirstOrNull()
+                    val next = queue.removeFirstOrNull()
+                    _uiState.update {
+                        it.copy(
+                            currentQuote = current,
+                            nextQuote = next,
+                            feedQueue = queue,
+                            isLoading = false,
+                            isConnecting = false,
+                            errorMessage = null,
+                            currentCardAppearedAt = System.currentTimeMillis(),
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, isConnecting = false) }
+                }
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
-                        currentQuote = current,
-                        nextQuote = next,
-                        feedQueue = queue,
                         isLoading = false,
+                        isConnecting = false,
+                        errorMessage = e.message ?: "Error loading feed",
                     )
                 }
-            } else {
-                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -67,14 +83,42 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
         val state = _uiState.value
         val current = state.currentQuote ?: return
 
+        // Calculate dwell time
+        val dwellTimeMs = if (state.currentCardAppearedAt > 0) {
+            (System.currentTimeMillis() - state.currentCardAppearedAt).toInt()
+        } else {
+            0
+        }
+
+        // Map swipe direction to category string
+        val directionStr = when (direction) {
+            SwipeDirection.UP -> "up"
+            SwipeDirection.RIGHT -> "right"
+            SwipeDirection.LEFT -> "left"
+            SwipeDirection.DOWN -> "down"
+        }
+
         viewModelScope.launch {
             // Right swipe = save
             if (direction == SwipeDirection.RIGHT && !current.isSaved) {
                 repository.saveQuote(current)
             }
 
+            // Record swipe to API (fire-and-forget)
+            repository.recordSwipe(
+                quoteId = current.id,
+                direction = directionStr,
+                category = current.category,
+                dwellTimeMs = dwellTimeMs,
+            )
+
             loadNextQuote()
-            _uiState.update { it.copy(swipeCount = it.swipeCount + 1) }
+            _uiState.update {
+                it.copy(
+                    swipeCount = it.swipeCount + 1,
+                    currentCardAppearedAt = System.currentTimeMillis(),
+                )
+            }
         }
     }
 
@@ -91,6 +135,10 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
         }
     }
 
+    fun retry() {
+        loadFeed(currentLang)
+    }
+
     private fun loadNextQuote() {
         _uiState.update { state ->
             val queue = state.feedQueue.toMutableList()
@@ -100,8 +148,12 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
             // If queue is running low, reload
             if (queue.size <= 2) {
                 viewModelScope.launch {
-                    val moreQuotes = repository.getFeed(currentLang)
-                    _uiState.update { it.copy(feedQueue = it.feedQueue + moreQuotes) }
+                    try {
+                        val moreQuotes = repository.getFeed(currentLang)
+                        _uiState.update { it.copy(feedQueue = it.feedQueue + moreQuotes) }
+                    } catch (_: Exception) {
+                        // Silently fail; user can keep swiping existing queue
+                    }
                 }
             }
 
