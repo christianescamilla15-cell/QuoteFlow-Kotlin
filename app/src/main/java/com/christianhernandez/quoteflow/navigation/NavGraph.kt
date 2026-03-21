@@ -2,6 +2,8 @@ package com.christianhernandez.quoteflow.navigation
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
@@ -42,6 +44,8 @@ import com.christianhernandez.quoteflow.ui.profile.ProfileScreen
 import com.christianhernandez.quoteflow.ui.profile.ProfileViewModel
 import com.christianhernandez.quoteflow.ui.reflection.WeeklyReflectionScreen
 import com.christianhernandez.quoteflow.ui.reflection.WeeklyReflectionViewModel
+import com.christianhernandez.quoteflow.ui.tutorial.TutorialOverlay
+import com.christianhernandez.quoteflow.ui.tutorial.TutorialViewModel
 import com.christianhernandez.quoteflow.ui.vault.VaultScreen
 import com.christianhernandez.quoteflow.ui.vault.VaultViewModel
 
@@ -76,10 +80,16 @@ fun QuoteFlowNavHost(
     val packsViewModel: PacksViewModel = viewModel(factory = PacksViewModel.Factory(app.repository))
     val onboardingViewModel: OnboardingViewModel = viewModel(factory = OnboardingViewModel.Factory(app.repository))
     val reflectionViewModel: WeeklyReflectionViewModel = viewModel(factory = WeeklyReflectionViewModel.Factory(app.repository))
+    val tutorialViewModel: TutorialViewModel = viewModel()
 
     val feedState by feedViewModel.uiState.collectAsState()
     val profileState by profileViewModel.uiState.collectAsState()
     val onboardingState by onboardingViewModel.uiState.collectAsState()
+
+    // Initialize tutorial (check SharedPreferences)
+    LaunchedEffect(Unit) {
+        tutorialViewModel.init(context)
+    }
 
     // Check onboarding on startup
     LaunchedEffect(Unit) {
@@ -99,6 +109,11 @@ fun QuoteFlowNavHost(
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = currentRoute != Screen.Onboarding.route && currentRoute != Screen.Reflection.route
 
+    // Tutorial shows after onboarding, only on feed route
+    val showTutorialOverlay by tutorialViewModel.showTutorial.collectAsState()
+    val isOnFeed = currentRoute == Screen.Feed.route
+
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
@@ -228,4 +243,13 @@ fun QuoteFlowNavHost(
             }
         }
     }
+
+    // Tutorial overlay sits on top of everything (including bottom nav)
+    if (showTutorialOverlay && isOnFeed) {
+        TutorialOverlay(
+            viewModel = tutorialViewModel,
+            language = language,
+        )
+    }
+    } // end Box
 }
