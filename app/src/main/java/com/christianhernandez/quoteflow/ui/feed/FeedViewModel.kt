@@ -257,68 +257,69 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
     }
 
     /**
-     * Load next quote matching the requested category.
-     * If no match in queue, falls back to any available quote.
-     * The swipe direction determines what category appears next:
-     * UP=stoicism, RIGHT=discipline, LEFT=reflection, DOWN=philosophy
+     * Simple, lightweight next-card loader.
+     * Uses the pre-loaded direction preview as the new current card.
+     * Falls back to any quote in queue if no match.
      */
     private fun loadNextQuoteByCategory(category: String) {
-        _uiState.update { state ->
-            val queue = state.feedQueue.toMutableList()
+        val state = _uiState.value
+        val queue = state.feedQueue.toMutableList()
 
-            // Find a quote matching the requested category
-            val matchIndex = queue.indexOfFirst { it.category == category }
-            val newCurrent = if (matchIndex >= 0) {
-                queue.removeAt(matchIndex)
-            } else {
-                // Fallback: take any quote from queue
-                queue.removeFirstOrNull()
-            }
+        // Use the pre-loaded preview for this category (already selected)
+        val preloaded = when (category) {
+            "stoicism" -> state.nextByStoicism
+            "discipline" -> state.nextByDiscipline
+            "reflection" -> state.nextByReflection
+            "philosophy" -> state.nextByPhilosophy
+            else -> null
+        }
 
-            // For next preview, try to pick a different category for variety
-            val newNext = queue.firstOrNull()
+        // Remove it from queue
+        val newCurrent = if (preloaded != null) {
+            queue.removeAll { it.id == preloaded.id }
+            preloaded
+        } else {
+            // Fallback: any quote
+            queue.removeFirstOrNull()
+        }
 
-            // If queue is running low (< 5 quotes), fetch more
-            if (queue.size < 5) {
-                viewModelScope.launch {
-                    try {
-                        val moreQuotes = repository.getFeed(currentLang)
-                        val balanced = balanceFeed(moreQuotes)
-                        _uiState.update { current ->
-                            // If currentQuote became null (empty queue), populate it
-                            if (current.currentQuote == null && balanced.isNotEmpty()) {
-                                val refillQueue = balanced.toMutableList()
-                                val fillCurrent = refillQueue.removeFirstOrNull()
-                                val fillNext = refillQueue.removeFirstOrNull()
-                                current.copy(
-                                    currentQuote = fillCurrent,
-                                    nextQuote = fillNext,
-                                    feedQueue = current.feedQueue + refillQueue,
-                                    currentCardAppearedAt = System.currentTimeMillis(),
-                                )
-                            } else {
-                                current.copy(feedQueue = current.feedQueue + balanced)
-                            }
-                        }
-                    } catch (_: Exception) {
-                        // Silently fail; user can keep swiping existing queue
-                    }
-                }
-            }
-
-            // If newCurrent is null (queue was exhausted), trigger a full reload
-            if (newCurrent == null) {
-                viewModelScope.launch { loadFeed(currentLang) }
-            }
-
-            state.copy(
+        _uiState.update {
+            it.copy(
                 currentQuote = newCurrent,
-                nextQuote = null,
                 feedQueue = queue,
+                currentCardAppearedAt = System.currentTimeMillis(),
             )
         }
-        // Re-preload direction previews for the new current card
-        preloadDirectionPreviews()
+
+        // Refill if low
+        if (queue.size < 5) {
+            viewModelScope.launch {
+                try {
+                    val more = repository.getFeed(currentLang)
+                    val balanced = balanceFeed(more)
+                    _uiState.update { s ->
+                        if (s.currentQuote == null && balanced.isNotEmpty()) {
+                            val q = balanced.toMutableList()
+                            s.copy(
+                                currentQuote = q.removeFirstOrNull(),
+                                feedQueue = s.feedQueue + q,
+                                currentCardAppearedAt = System.currentTimeMillis(),
+                            )
+                        } else {
+                            s.copy(feedQueue = s.feedQueue + balanced)
+                        }
+                    }
+                    preloadDirectionPreviews()
+                } catch (_: Exception) {}
+            }
+        }
+
+        // If nothing left, full reload
+        if (newCurrent == null) {
+            viewModelScope.launch { loadFeed(currentLang) }
+        } else {
+            preloadDirectionPreviews()
+        }
     }
 
     class Factory(private val repository: QuoteRepository) : ViewModelProvider.Factory {

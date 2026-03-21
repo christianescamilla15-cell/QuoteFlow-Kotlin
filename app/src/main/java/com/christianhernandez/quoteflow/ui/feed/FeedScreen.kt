@@ -52,6 +52,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -170,33 +172,58 @@ fun FeedScreen(
                     )
                 }
 
-                // Cold start / connecting state
+                // Cold start / connecting — show rotating quotes while waiting
                 uiState.isConnecting -> {
+                    val loadingQuotes = if (language == "es") listOf(
+                        "\"La felicidad de tu vida depende de la calidad de tus pensamientos.\" — Marco Aurelio",
+                        "\"Sufrimos más en la imaginación que en la realidad.\" — Séneca",
+                        "\"Conócete a ti mismo.\" — Sócrates",
+                        "\"El único verdadero error es no corregir nuestros errores pasados.\" — Confucio",
+                        "\"La vida sin examinar no vale la pena vivir.\" — Sócrates",
+                        "\"Sé el cambio que quieres ver en el mundo.\" — Gandhi",
+                    ) else listOf(
+                        "\"The happiness of your life depends on the quality of your thoughts.\" — Marcus Aurelius",
+                        "\"We suffer more in imagination than in reality.\" — Seneca",
+                        "\"Know thyself.\" — Socrates",
+                        "\"The only true error is not correcting our past mistakes.\" — Confucius",
+                        "\"The unexamined life is not worth living.\" — Socrates",
+                        "\"Be the change you wish to see in the world.\" — Gandhi",
+                    )
+                    var currentLoadingQuote by remember { mutableIntStateOf(0) }
+                    LaunchedEffect(Unit) {
+                        while (true) {
+                            kotlinx.coroutines.delay(3000)
+                            currentLoadingQuote = (currentLoadingQuote + 1) % loadingQuotes.size
+                        }
+                    }
+
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp),
                     ) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = if (language == "es") {
-                                "Conectando al servidor..."
-                            } else {
-                                "Connecting to server..."
-                            },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(40.dp),
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Rotating quote while loading
                         Text(
-                            text = if (language == "es") {
-                                "(primera conexion puede tardar hasta 30 segundos)"
-                            } else {
-                                "(first connection may take up to 30 seconds)"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            text = loadingQuotes[currentLoadingQuote],
+                            fontFamily = FontFamily.Serif,
+                            fontStyle = FontStyle.Italic,
+                            fontSize = 16.sp,
+                            lineHeight = 24.sp,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 32.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = if (language == "es") "Preparando tu experiencia..." else "Preparing your experience...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         )
                     }
                 }
