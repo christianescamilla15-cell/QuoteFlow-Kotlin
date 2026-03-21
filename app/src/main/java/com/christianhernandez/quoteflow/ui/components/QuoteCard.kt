@@ -27,6 +27,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -89,23 +93,47 @@ fun QuoteCard(
     val displayAuthor = AuthorTranslations.translate(quote.author, language)
     val authorInitial = if (displayAuthor.isNotEmpty()) displayAuthor[0].uppercase() else "?"
 
-    // Card background gradient: subtle category color tint
+    // Translate category for display
+    val displayCategory = when {
+        language == "es" -> when (quote.category) {
+            "stoicism" -> "Sabidur\u00eda"
+            "discipline" -> "Disciplina"
+            "reflection" -> "Reflexi\u00f3n"
+            "philosophy" -> "Filosof\u00eda"
+            else -> quote.category.replaceFirstChar { it.uppercase() }
+        }
+        else -> quote.category.replaceFirstChar { it.uppercase() }
+    }
+
+    // Image loading state
+    var imageFailed by remember { mutableStateOf(false) }
+
+    // Solid card background with subtle category color gradient — fully opaque, 3D feel
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val cardBackground = Brush.verticalGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.surface,
-            categoryColor.copy(alpha = 0.05f),
-            MaterialTheme.colorScheme.surface,
+            surfaceColor,
+            Color(
+                red = (surfaceColor.red * 0.95f + categoryColor.red * 0.05f),
+                green = (surfaceColor.green * 0.95f + categoryColor.green * 0.05f),
+                blue = (surfaceColor.blue * 0.95f + categoryColor.blue * 0.05f),
+                alpha = 1f,
+            ),
+            surfaceColor,
         )
     )
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 12.dp,
+            pressedElevation = 16.dp,
+        ),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent,
+            containerColor = surfaceColor,
         ),
     ) {
         Box(
@@ -126,14 +154,16 @@ fun QuoteCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Large author photo
-                if (portraitUrl != null) {
+                if (portraitUrl != null && !imageFailed) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(portraitUrl)
                             .crossfade(true)
+                            .addHeader("User-Agent", "QuoteFlow/1.0 (Android)")
                             .build(),
                         contentDescription = displayAuthor,
                         contentScale = ContentScale.Crop,
+                        onError = { imageFailed = true },
                         modifier = Modifier
                             .size(120.dp)
                             .clip(RoundedCornerShape(16.dp))
@@ -146,7 +176,8 @@ fun QuoteCard(
                                 }
                             ),
                     )
-                } else {
+                }
+                if (portraitUrl == null || imageFailed) {
                     // Fallback: initial letter in colored rounded rectangle
                     Box(
                         modifier = Modifier
@@ -202,7 +233,7 @@ fun QuoteCard(
                         .padding(horizontal = 12.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = quote.category.replaceFirstChar { it.uppercase() },
+                        text = displayCategory,
                         style = MaterialTheme.typography.labelSmall,
                         color = categoryColor,
                     )

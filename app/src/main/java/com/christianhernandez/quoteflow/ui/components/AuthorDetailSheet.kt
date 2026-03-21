@@ -21,6 +21,10 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +55,7 @@ fun AuthorDetailSheet(
     val portraitUrl = AuthorPortraits.getPortraitUrl(authorName)
     val initial = if (authorName.isNotEmpty()) authorName[0].uppercase() else "?"
     val bio = getAuthorBio(authorName, language)
+    var imageFailed by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -67,19 +72,22 @@ fun AuthorDetailSheet(
         ) {
             // Author photo (large)
             item {
-                if (portraitUrl != null) {
+                if (portraitUrl != null && !imageFailed) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(portraitUrl)
                             .crossfade(true)
+                            .addHeader("User-Agent", "QuoteFlow/1.0 (Android)")
                             .build(),
                         contentDescription = authorName,
                         contentScale = ContentScale.Crop,
+                        onError = { imageFailed = true },
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape),
                     )
-                } else {
+                }
+                if (portraitUrl == null || imageFailed) {
                     Box(
                         modifier = Modifier
                             .size(80.dp)

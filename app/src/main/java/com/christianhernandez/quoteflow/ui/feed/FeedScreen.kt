@@ -244,34 +244,31 @@ fun FeedScreen(
                         kotlin.math.abs(currentDragX),
                         kotlin.math.abs(currentDragY)
                     ) / 300f).coerceIn(0f, 1f)
+                    // Next card only visible when dragging (starts invisible)
                     val nextCardScale by animateFloatAsState(
-                        targetValue = 0.95f + (0.05f * dragProgress),
-                        animationSpec = tween(100),
+                        targetValue = if (dragProgress > 0.05f) 0.90f + (0.08f * dragProgress) else 0.85f,
+                        animationSpec = tween(150),
                         label = "next_card_scale",
                     )
                     val nextCardAlpha by animateFloatAsState(
-                        targetValue = 0.5f + (0.5f * dragProgress),
-                        animationSpec = tween(100),
+                        targetValue = if (dragProgress > 0.05f) dragProgress * 0.6f else 0f,
+                        animationSpec = tween(150),
                         label = "next_card_alpha",
                     )
 
-                    // Next card preview (behind) with scale animation
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = uiState.nextQuote != null,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                    ) {
+                    // Next card preview — ONLY appears when actively dragging
+                    if (nextCardAlpha > 0.01f) {
                         uiState.nextQuote?.let { nextQuote ->
-                            QuoteCard(
-                                quote = nextQuote,
-                                onSaveClick = { },
-                                onShareClick = { },
-                                language = language,
-                                modifier = Modifier
-                                    .scale(nextCardScale)
-                                    .alpha(nextCardAlpha)
-                                    .padding(top = 16.dp),
-                            )
+                            Box(modifier = Modifier.alpha(nextCardAlpha)) {
+                                QuoteCard(
+                                    quote = nextQuote,
+                                    onSaveClick = { },
+                                    onShareClick = { },
+                                    language = language,
+                                    modifier = Modifier
+                                        .scale(nextCardScale),
+                                )
+                            }
                         }
                     }
 
