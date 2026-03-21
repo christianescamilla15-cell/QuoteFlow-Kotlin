@@ -133,3 +133,9 @@ data class SnapshotResponse(
     val saved: Boolean?,
     val snapshot: MapScores?,
 )
+
+// Weekly Insight
+data class WeeklyInsightResponse(
+    val reflection: String?,
+    val dominant_category: String?,
+)

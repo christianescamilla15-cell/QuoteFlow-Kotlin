@@ -1,5 +1,7 @@
 package com.christianhernandez.quoteflow.ui.profile
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -69,6 +72,7 @@ fun ProfileScreen(
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit,
     onLogout: () -> Unit = {},
+    onNavigateToReflection: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -129,7 +133,8 @@ fun ProfileScreen(
                 )
             }
 
-            // Philosophy Map section with radar chart
+            // Philosophy Map section with animated radar chart
+            // Always show if we have map scores (local or API)
             if (uiState.mapScores != null) {
                 Spacer(modifier = Modifier.height(28.dp))
 
@@ -150,10 +155,10 @@ fun ProfileScreen(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // Radar chart
+                        // Animated radar chart
                         val scores = uiState.mapScores!!
                         val delta = uiState.mapDelta
-                        PhilosophyRadarChart(scores = scores)
+                        AnimatedPhilosophyRadarChart(scores = scores)
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -209,6 +214,48 @@ fun ProfileScreen(
                                 }
                             )
                         }
+                    }
+                }
+            }
+
+            // Weekly Reflection card
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Card(
+                onClick = onNavigateToReflection,
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                ),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (language == "es") "Reflexion Semanal" else "Weekly Reflection",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = if (language == "es") {
+                                "Descubre tu reflexion personalizada basada en tu actividad"
+                            } else {
+                                "Discover your personalized reflection based on your activity"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -425,17 +472,37 @@ fun ProfileScreen(
     }
 }
 
+/**
+ * Animated radar chart that smoothly transitions when scores change.
+ * Uses animateFloatAsState for each axis.
+ */
 @Composable
-private fun PhilosophyRadarChart(scores: MapScores) {
+private fun AnimatedPhilosophyRadarChart(scores: MapScores) {
     val wisdomColor = StoicismColor
     val disciplineColor = DisciplineColor
     val reflectionColor = ReflectionColor
     val philosophyColor = PhilosophyColor
 
-    val wisdom = (scores.wisdom ?: 0).coerceIn(0, 100) / 100f
-    val discipline = (scores.discipline ?: 0).coerceIn(0, 100) / 100f
-    val reflection = (scores.reflection ?: 0).coerceIn(0, 100) / 100f
-    val philosophy = (scores.philosophy ?: 0).coerceIn(0, 100) / 100f
+    val wisdom by animateFloatAsState(
+        targetValue = (scores.wisdom ?: 0).coerceIn(0, 100) / 100f,
+        animationSpec = tween(durationMillis = 600),
+        label = "wisdom_anim",
+    )
+    val discipline by animateFloatAsState(
+        targetValue = (scores.discipline ?: 0).coerceIn(0, 100) / 100f,
+        animationSpec = tween(durationMillis = 600),
+        label = "discipline_anim",
+    )
+    val reflection by animateFloatAsState(
+        targetValue = (scores.reflection ?: 0).coerceIn(0, 100) / 100f,
+        animationSpec = tween(durationMillis = 600),
+        label = "reflection_anim",
+    )
+    val philosophy by animateFloatAsState(
+        targetValue = (scores.philosophy ?: 0).coerceIn(0, 100) / 100f,
+        animationSpec = tween(durationMillis = 600),
+        label = "philosophy_anim",
+    )
 
     val gridColor = Color.Gray.copy(alpha = 0.2f)
     val fillColor = StoicismColor.copy(alpha = 0.15f)
@@ -463,7 +530,7 @@ private fun PhilosophyRadarChart(scores: MapScores) {
         drawLine(gridColor, Offset(cx, cy - maxR), Offset(cx, cy + maxR), strokeWidth = 1f)
         drawLine(gridColor, Offset(cx - maxR, cy), Offset(cx + maxR, cy), strokeWidth = 1f)
 
-        // Draw data diamond
+        // Draw data diamond (animated)
         val topY = cy - maxR * wisdom       // wisdom (up)
         val rightX = cx + maxR * discipline  // discipline (right)
         val bottomY = cy + maxR * philosophy // philosophy (down)

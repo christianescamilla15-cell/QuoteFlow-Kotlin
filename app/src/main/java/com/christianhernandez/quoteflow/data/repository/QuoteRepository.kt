@@ -313,4 +313,19 @@ class QuoteRepository(
     suspend fun clearCache() {
         quoteDao.deleteAllNonSaved()
     }
+
+    /**
+     * Get weekly insight/reflection text from API.
+     */
+    suspend fun getWeeklyInsight(lang: String = "en"): String? {
+        if (apiService != null) {
+            try {
+                val response = apiService.getWeeklyInsight(lang)
+                return response.reflection
+            } catch (_: Exception) {
+                // Fallback to local generation handled by caller
+            }
+        }
+        return null
+    }
 }

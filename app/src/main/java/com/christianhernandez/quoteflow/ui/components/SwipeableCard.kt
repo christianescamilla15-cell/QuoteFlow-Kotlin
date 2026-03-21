@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -44,27 +45,43 @@ fun SwipeableCard(
     var dragY by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
 
-    // Entrance scale animation: new card appears at 0.95 and scales to 1.0
-    val entranceScale = remember { Animatable(0.95f) }
+    // Entrance animation: scale from 0.92 to 1.0, fade from 0.3 to 1.0
+    val entranceScale = remember { Animatable(0.92f) }
+    val entranceAlpha = remember { Animatable(0.3f) }
     LaunchedEffect(Unit) {
-        entranceScale.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMediumLow,
-            ),
-        )
+        launch {
+            entranceScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+            )
+        }
+        launch {
+            entranceAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 300),
+            )
+        }
     }
+
+    // Calculate blur based on drag distance (0 -> 8dp as card is swiped away)
+    val dragDistance = maxOf(abs(offsetX.value), abs(offsetY.value))
+    val blurAmount = (dragDistance / (swipeThresholdPx * 3f) * 8f).coerceIn(0f, 8f)
+    val blurDp = with(density) { blurAmount.dp }
 
     Box(
         modifier = modifier
             .offset { IntOffset(offsetX.value.roundToInt(), offsetY.value.roundToInt()) }
             .graphicsLayer {
                 rotationZ = offsetX.value / 40f
-                alpha = 1f - (abs(offsetX.value) / (swipeThresholdPx * 3f)).coerceIn(0f, 0.5f)
+                // Fade out as card is swiped away
+                alpha = entranceAlpha.value * (1f - (abs(offsetX.value) / (swipeThresholdPx * 3f)).coerceIn(0f, 0.5f))
                 scaleX = entranceScale.value
                 scaleY = entranceScale.value
             }
+            .blur(blurDp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { onDoubleTap?.invoke() }

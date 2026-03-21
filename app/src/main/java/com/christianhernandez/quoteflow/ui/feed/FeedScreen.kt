@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.christianhernandez.quoteflow.ui.components.AuthorDetailSheet
 import com.christianhernandez.quoteflow.ui.components.QuoteCard
 import com.christianhernandez.quoteflow.ui.components.SwipeableCard
 import com.christianhernandez.quoteflow.util.HapticService
@@ -71,6 +73,10 @@ fun FeedScreen(
     val context = LocalContext.current
     var currentDragX by remember { mutableFloatStateOf(0f) }
     var currentDragY by remember { mutableFloatStateOf(0f) }
+
+    // Author detail bottom sheet state
+    var showAuthorSheet by remember { mutableStateOf(false) }
+    var selectedAuthorName by remember { mutableStateOf("") }
 
     // Track swipe count for haptic on swipe completed
     var lastSwipeCount by remember { mutableIntStateOf(0) }
@@ -287,6 +293,10 @@ fun FeedScreen(
                                         viewModel.onSave(quote)
                                         HapticService.lightTap(context)
                                     },
+                                    onAuthorClick = {
+                                        selectedAuthorName = quote.author
+                                        showAuthorSheet = true
+                                    },
                                     onShareClick = {
                                         viewModel.onShare(quote)
                                         val sendIntent = Intent().apply {
@@ -386,6 +396,23 @@ fun FeedScreen(
         }
 
         Spacer(modifier = Modifier.height(4.dp))
+    }
+
+    // Author detail bottom sheet
+    if (showAuthorSheet && selectedAuthorName.isNotEmpty()) {
+        // Collect quotes by this author from the feed queue + current
+        val authorQuotes = buildList {
+            uiState.currentQuote?.let { if (it.author == selectedAuthorName) add(it) }
+            uiState.nextQuote?.let { if (it.author == selectedAuthorName) add(it) }
+            addAll(uiState.feedQueue.filter { it.author == selectedAuthorName })
+        }.distinctBy { it.id }
+
+        AuthorDetailSheet(
+            authorName = selectedAuthorName,
+            authorQuotes = authorQuotes,
+            language = language,
+            onDismiss = { showAuthorSheet = false },
+        )
     }
 }
 

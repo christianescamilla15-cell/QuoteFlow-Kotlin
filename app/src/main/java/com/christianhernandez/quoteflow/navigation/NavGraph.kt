@@ -1,6 +1,7 @@
 package com.christianhernandez.quoteflow.navigation
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
@@ -39,6 +40,8 @@ import com.christianhernandez.quoteflow.ui.packs.PacksScreen
 import com.christianhernandez.quoteflow.ui.packs.PacksViewModel
 import com.christianhernandez.quoteflow.ui.profile.ProfileScreen
 import com.christianhernandez.quoteflow.ui.profile.ProfileViewModel
+import com.christianhernandez.quoteflow.ui.reflection.WeeklyReflectionScreen
+import com.christianhernandez.quoteflow.ui.reflection.WeeklyReflectionViewModel
 import com.christianhernandez.quoteflow.ui.vault.VaultScreen
 import com.christianhernandez.quoteflow.ui.vault.VaultViewModel
 
@@ -49,6 +52,7 @@ sealed class Screen(val route: String, val label: String, val labelEs: String, v
     data object Packs : Screen("packs", "Packs", "Packs", Icons.Default.GridView)
     data object Profile : Screen("profile", "Profile", "Perfil", Icons.Default.Person)
     data object Onboarding : Screen("onboarding", "Onboarding", "Onboarding", Icons.Default.Explore)
+    data object Reflection : Screen("reflection", "Reflection", "Reflexion", Icons.Default.Explore)
 }
 
 val bottomNavItems = listOf(Screen.Feed, Screen.Vault, Screen.Challenge, Screen.Packs, Screen.Profile)
@@ -71,6 +75,7 @@ fun QuoteFlowNavHost(
     val profileViewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory(app.repository))
     val packsViewModel: PacksViewModel = viewModel(factory = PacksViewModel.Factory(app.repository))
     val onboardingViewModel: OnboardingViewModel = viewModel(factory = OnboardingViewModel.Factory(app.repository))
+    val reflectionViewModel: WeeklyReflectionViewModel = viewModel(factory = WeeklyReflectionViewModel.Factory(app.repository))
 
     val feedState by feedViewModel.uiState.collectAsState()
     val profileState by profileViewModel.uiState.collectAsState()
@@ -92,7 +97,7 @@ fun QuoteFlowNavHost(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val showBottomBar = currentRoute != Screen.Onboarding.route
+    val showBottomBar = currentRoute != Screen.Onboarding.route && currentRoute != Screen.Reflection.route
 
     Scaffold(
         bottomBar = {
@@ -191,6 +196,33 @@ fun QuoteFlowNavHost(
                         navController.navigate(Screen.Feed.route) {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onNavigateToReflection = {
+                        navController.navigate(Screen.Reflection.route)
+                    },
+                )
+            }
+
+            composable(Screen.Reflection.route) {
+                WeeklyReflectionScreen(
+                    viewModel = reflectionViewModel,
+                    language = language,
+                    onBack = { navController.popBackStack() },
+                    onShare = { reflectionText ->
+                        val sendIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                "$reflectionText\n\nVia QuoteFlow"
+                            )
+                            type = "text/plain"
+                        }
+                        context.startActivity(
+                            Intent.createChooser(
+                                sendIntent,
+                                if (language == "es") "Compartir reflexion" else "Share reflection"
+                            )
+                        )
                     },
                 )
             }

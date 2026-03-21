@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.christianhernandez.quoteflow.data.remote.MapScores
 import com.christianhernandez.quoteflow.data.remote.ProfileRequest
+import com.christianhernandez.quoteflow.data.repository.PhilosophyRepository
 import com.christianhernandez.quoteflow.data.repository.QuoteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,12 +37,17 @@ class ProfileViewModel(private val repository: QuoteRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    // Store API scores separately so we can merge with local
+    private var apiScores: MapScores? = null
+    private var apiDelta: MapScores? = null
+
     init {
         observeSavedCount()
         loadTotalQuotes()
         loadProfile()
         loadPremiumStatus()
         loadPhilosophyMap()
+        observeLocalPhilosophyPoints()
     }
 
     private fun observeSavedCount() {
@@ -50,6 +56,48 @@ class ProfileViewModel(private val repository: QuoteRepository) : ViewModel() {
                 _uiState.update { it.copy(savedCount = count) }
             }
         }
+    }
+
+    /**
+     * Observe local PhilosophyRepository points in real-time
+     * and merge with API scores for the radar chart.
+     */
+    private fun observeLocalPhilosophyPoints() {
+        viewModelScope.launch {
+            PhilosophyRepository.points.collect { localPoints ->
+                val merged = mergeScores(apiScores, localPoints)
+                _uiState.update { it.copy(mapScores = merged) }
+            }
+        }
+    }
+
+    /**
+     * Merge API scores with local PhilosophyRepository points.
+     * Local points are converted to 0-100 scale and averaged with API scores.
+     */
+    private fun mergeScores(
+        api: MapScores?,
+        local: com.christianhernandez.quoteflow.data.repository.PhilosophyPoints,
+    ): MapScores {
+        val localScores = PhilosophyRepository.getScores()
+        if (api == null) {
+            // No API data: use local scores only
+            return localScores
+        }
+        // Merge: average of API and local (weighted toward whichever has more data)
+        val localTotal = local.total()
+        if (localTotal == 0) return api
+
+        // Weighted merge: local gets more weight as user interacts more
+        val localWeight = (localTotal.coerceAtMost(50) / 50f).coerceIn(0f, 0.6f)
+        val apiWeight = 1f - localWeight
+
+        return MapScores(
+            wisdom = ((api.wisdom ?: 0) * apiWeight + (localScores.wisdom ?: 0) * localWeight).toInt(),
+            discipline = ((api.discipline ?: 0) * apiWeight + (localScores.discipline ?: 0) * localWeight).toInt(),
+            reflection = ((api.reflection ?: 0) * apiWeight + (localScores.reflection ?: 0) * localWeight).toInt(),
+            philosophy = ((api.philosophy ?: 0) * apiWeight + (localScores.philosophy ?: 0) * localWeight).toInt(),
+        )
     }
 
     private fun loadTotalQuotes() {
@@ -107,15 +155,31 @@ class ProfileViewModel(private val repository: QuoteRepository) : ViewModel() {
             try {
                 val map = repository.getPhilosophyMap()
                 if (map != null) {
+                    apiScores = map.current
+                    apiDelta = map.delta
+                    // Merge with current local points
+                    val merged = mergeScores(map.current, PhilosophyRepository.points.value)
                     _uiState.update {
                         it.copy(
-                            mapScores = map.current,
+                            mapScores = merged,
                             mapDelta = map.delta,
                         )
                     }
+                } else {
+                    // No API data; use local scores if available
+                    val localScores = PhilosophyRepository.getScores()
+                    val hasLocal = PhilosophyRepository.points.value.total() > 0
+                    if (hasLocal) {
+                        _uiState.update { it.copy(mapScores = localScores) }
+                    }
                 }
             } catch (_: Exception) {
-                // Silently fail
+                // Use local scores as fallback
+                val localScores = PhilosophyRepository.getScores()
+                val hasLocal = PhilosophyRepository.points.value.total() > 0
+                if (hasLocal) {
+                    _uiState.update { it.copy(mapScores = localScores) }
+                }
             }
         }
     }

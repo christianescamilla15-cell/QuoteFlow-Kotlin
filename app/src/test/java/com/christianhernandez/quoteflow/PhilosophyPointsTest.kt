@@ -1,6 +1,6 @@
 package com.christianhernandez.quoteflow
 
-import com.christianhernandez.quoteflow.ui.feed.PhilosophyPoints
+import com.christianhernandez.quoteflow.data.repository.PhilosophyPoints
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

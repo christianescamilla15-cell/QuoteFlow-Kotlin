@@ -61,4 +61,7 @@ interface ApiService {
         @Path("id") id: String,
         @Query("cursor") cursor: String? = null,
     ): PackFeedResponse
+
+    @GET("insights/weekly")
+    suspend fun getWeeklyInsight(@Query("lang") lang: String = "en"): WeeklyInsightResponse
 }

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.christianhernandez.quoteflow.data.model.Quote
+import com.christianhernandez.quoteflow.data.repository.PhilosophyPoints
+import com.christianhernandez.quoteflow.data.repository.PhilosophyRepository
 import com.christianhernandez.quoteflow.data.repository.QuoteRepository
 import com.christianhernandez.quoteflow.util.SwipeDirection
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,35 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-// Philosophy Map points per action
-// Swipe: 1 point, Like (double-tap): 2 points, Vault save: 3 points, Share: 4 points
-data class PhilosophyPoints(
-    val stoicism: Int = 0,
-    val discipline: Int = 0,
-    val reflection: Int = 0,
-    val philosophy: Int = 0,
-) {
-    fun addPoints(category: String, points: Int): PhilosophyPoints {
-        return when (category) {
-            "stoicism" -> copy(stoicism = stoicism + points)
-            "discipline" -> copy(discipline = discipline + points)
-            "reflection" -> copy(reflection = reflection + points)
-            "philosophy" -> copy(philosophy = philosophy + points)
-            else -> this
-        }
-    }
-
-    fun dominant(): String {
-        val max = maxOf(stoicism, discipline, reflection, philosophy)
-        return when (max) {
-            stoicism -> "stoicism"
-            discipline -> "discipline"
-            reflection -> "reflection"
-            else -> "philosophy"
-        }
-    }
-}
 
 data class FeedUiState(
     val currentQuote: Quote? = null,
@@ -65,12 +38,22 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
 
     init {
         observeSavedCount()
+        observePhilosophyPoints()
     }
 
     private fun observeSavedCount() {
         viewModelScope.launch {
             repository.getSavedCount().collect { count ->
                 _uiState.update { it.copy(savedCount = count) }
+            }
+        }
+    }
+
+    /** Keep local UI state in sync with the shared PhilosophyRepository */
+    private fun observePhilosophyPoints() {
+        viewModelScope.launch {
+            PhilosophyRepository.points.collect { points ->
+                _uiState.update { it.copy(philosophyPoints = points) }
             }
         }
     }
@@ -159,10 +142,8 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
         }
 
         viewModelScope.launch {
-            // Swipe = 1 point for the quote's category
-            _uiState.update {
-                it.copy(philosophyPoints = it.philosophyPoints.addPoints(current.category, 1))
-            }
+            // Swipe = 1 point for the quote's category (shared repository)
+            PhilosophyRepository.addPoints(current.category, 1)
 
             // Record swipe to API (fire-and-forget)
             repository.recordSwipe(
@@ -194,11 +175,11 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
     fun onSave(quote: Quote) {
         viewModelScope.launch {
             val updated = repository.toggleSave(quote)
-            // Vault save = 3 points
+            // Vault save = 3 points (shared repository)
             if (updated.isSaved) {
+                PhilosophyRepository.addPoints(quote.category, 3)
                 _uiState.update {
                     it.copy(
-                        philosophyPoints = it.philosophyPoints.addPoints(quote.category, 3),
                         currentQuote = if (it.currentQuote?.id == quote.id) updated else it.currentQuote,
                     )
                 }
@@ -213,11 +194,9 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
     // Double-tap = Like = 2 points
     fun onDoubleTapLike() {
         val current = _uiState.value.currentQuote ?: return
+        PhilosophyRepository.addPoints(current.category, 2)
         _uiState.update {
-            it.copy(
-                showLikeAnimation = true,
-                philosophyPoints = it.philosophyPoints.addPoints(current.category, 2),
-            )
+            it.copy(showLikeAnimation = true)
         }
         // Hide animation after 800ms
         viewModelScope.launch {
@@ -232,9 +211,7 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
 
     // Share = 4 points
     fun onShare(quote: Quote) {
-        _uiState.update {
-            it.copy(philosophyPoints = it.philosophyPoints.addPoints(quote.category, 4))
-        }
+        PhilosophyRepository.addPoints(quote.category, 4)
     }
 
     fun retry() {
