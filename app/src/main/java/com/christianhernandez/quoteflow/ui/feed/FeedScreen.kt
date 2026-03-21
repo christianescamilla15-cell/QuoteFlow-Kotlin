@@ -266,6 +266,7 @@ fun FeedScreen(
                                 quote = nextQuote,
                                 onSaveClick = { },
                                 onShareClick = { },
+                                language = language,
                                 modifier = Modifier
                                     .scale(nextCardScale)
                                     .alpha(nextCardAlpha)
@@ -297,6 +298,7 @@ fun FeedScreen(
                                         selectedAuthorName = quote.author
                                         showAuthorSheet = true
                                     },
+                                    language = language,
                                     onShareClick = {
                                         viewModel.onShare(quote)
                                         val sendIntent = Intent().apply {
