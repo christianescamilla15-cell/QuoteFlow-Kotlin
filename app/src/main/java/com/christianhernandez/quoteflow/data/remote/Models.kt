@@ -102,16 +102,22 @@ data class MapScores(
 )
 
 // Packs
-data class PacksResponse(val data: List<PackApi>)
+data class PacksResponse(val packs: List<PackApi>, val user_state: String?)
+
+data class PackPriceApi(val usd: String?, val product_id_android: String?)
 
 data class PackApi(
     val id: String,
     val name: String,
     val description: String?,
     val icon: String?,
-    val price: String?,
-    val entitled: Boolean?,
+    val color: String?,
+    val price: PackPriceApi?,
     val quote_count: Int?,
+    val is_active: Boolean?,
+    val released_at: String?,
+    val is_grandfathered: Boolean?,
+    val access_status: String?,
 )
 
 data class PackPreviewResponse(val data: List<QuoteApiModel>)

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 data class OnboardingUiState(
     val currentStep: Int = 0,
@@ -26,7 +27,10 @@ class OnboardingViewModel(
     private val repository: QuoteRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(OnboardingUiState())
+    private val _uiState = MutableStateFlow(OnboardingUiState(
+        // Auto-detect language from device locale
+        preferredLanguage = if (Locale.getDefault().language == "es") "es" else "en"
+    ))
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     fun checkIfOnboardingNeeded() {

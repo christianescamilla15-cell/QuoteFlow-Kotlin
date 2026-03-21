@@ -13,15 +13,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.christianhernandez.quoteflow.navigation.QuoteFlowNavHost
+import com.christianhernandez.quoteflow.ui.ambient.AmbientAudioService
 import com.christianhernandez.quoteflow.ui.theme.QuoteFlowTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Auto-play ambient music at max volume on start
+        val firstTrack = AmbientAudioService.tracks.firstOrNull()
+        if (firstTrack != null && !AmbientAudioService.isCurrentlyPlaying()) {
+            AmbientAudioService.play(this, firstTrack)
+            AmbientAudioService.setVolume(1.0f)
+        }
+
         setContent {
             var isDarkMode by remember { mutableStateOf(false) }
-            var language by remember { mutableStateOf("en") }
+            val deviceLang = java.util.Locale.getDefault().language
+            var language by remember { mutableStateOf(if (deviceLang == "es") "es" else "en") }
 
             QuoteFlowTheme(darkTheme = isDarkMode) {
                 Surface(
@@ -37,5 +47,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        AmbientAudioService.stop()
     }
 }

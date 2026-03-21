@@ -196,7 +196,7 @@ fun PacksScreen(
 
                     items(uiState.packs) { pack ->
                         val isEntitled = uiState.isPremium ||
-                            pack.entitled == true ||
+                            pack.access_status == "full_access" ||
                             uiState.ownedPacks.contains(pack.id)
 
                         PackCard(
@@ -373,7 +373,7 @@ private fun PackCard(
                             text = if (isEntitled) {
                                 if (language == "es") "Incluido" else "Included"
                             } else {
-                                pack.price ?: "$2.99"
+                                pack.price?.usd?.let { "$$it" } ?: "$2.99"
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isEntitled) {

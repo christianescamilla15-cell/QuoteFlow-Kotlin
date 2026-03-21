@@ -30,7 +30,7 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
-    private var currentLang = "en"
+    private var currentLang = if (java.util.Locale.getDefault().language == "es") "es" else "en"
 
     init {
         observeSavedCount()

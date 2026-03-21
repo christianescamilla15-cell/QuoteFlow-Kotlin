@@ -42,7 +42,7 @@ class PacksViewModel(
                 val response = repository.getPacks()
                 if (response != null) {
                     _uiState.update {
-                        it.copy(packs = response.data, isLoading = false)
+                        it.copy(packs = response.packs, isLoading = false)
                     }
                 } else {
                     _uiState.update { it.copy(isLoading = false) }
