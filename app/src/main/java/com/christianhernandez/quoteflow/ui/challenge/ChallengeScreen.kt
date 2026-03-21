@@ -47,9 +47,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.christianhernandez.quoteflow.util.HapticService
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,9 +62,17 @@ fun ChallengeScreen(
     language: String,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(swipeCount) {
         viewModel.updateProgress(swipeCount)
+    }
+
+    // Haptic: challenge completed (heavyTap)
+    LaunchedEffect(uiState.showCelebration) {
+        if (uiState.showCelebration) {
+            HapticService.heavyTap(context)
+        }
     }
 
     Column(

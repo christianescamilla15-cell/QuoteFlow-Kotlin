@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -43,12 +44,26 @@ fun SwipeableCard(
     var dragY by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
 
+    // Entrance scale animation: new card appears at 0.95 and scales to 1.0
+    val entranceScale = remember { Animatable(0.95f) }
+    LaunchedEffect(Unit) {
+        entranceScale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+        )
+    }
+
     Box(
         modifier = modifier
             .offset { IntOffset(offsetX.value.roundToInt(), offsetY.value.roundToInt()) }
             .graphicsLayer {
                 rotationZ = offsetX.value / 40f
                 alpha = 1f - (abs(offsetX.value) / (swipeThresholdPx * 3f)).coerceIn(0f, 0.5f)
+                scaleX = entranceScale.value
+                scaleY = entranceScale.value
             }
             .pointerInput(Unit) {
                 detectTapGestures(
@@ -78,9 +93,12 @@ fun SwipeableCard(
 
                             when {
                                 absX > swipeThresholdPx && absX > absY -> {
-                                    // Horizontal swipe passed threshold
-                                    val targetX = if (dragX > 0) swipeThresholdPx * 4f else -swipeThresholdPx * 4f
-                                    offsetX.animateTo(targetX, tween(300))
+                                    // Horizontal swipe: fly off screen
+                                    val targetX = if (dragX > 0) swipeThresholdPx * 5f else -swipeThresholdPx * 5f
+                                    val targetY = dragY * 2f // continue in drag direction
+                                    launch { offsetX.animateTo(targetX, tween(350)) }
+                                    launch { offsetY.animateTo(targetY, tween(350)) }
+                                    kotlinx.coroutines.delay(350)
                                     val direction = if (dragX > 0) SwipeDirection.RIGHT else SwipeDirection.LEFT
                                     onSwiped(direction)
                                     // Reset for next card
@@ -88,9 +106,12 @@ fun SwipeableCard(
                                     offsetY.snapTo(0f)
                                 }
                                 absY > swipeThresholdPx && absY > absX -> {
-                                    // Vertical swipe passed threshold
-                                    val targetY = if (dragY > 0) swipeThresholdPx * 4f else -swipeThresholdPx * 4f
-                                    offsetY.animateTo(targetY, tween(300))
+                                    // Vertical swipe: fly off screen
+                                    val targetY = if (dragY > 0) swipeThresholdPx * 5f else -swipeThresholdPx * 5f
+                                    val targetX = dragX * 2f // continue in drag direction
+                                    launch { offsetY.animateTo(targetY, tween(350)) }
+                                    launch { offsetX.animateTo(targetX, tween(350)) }
+                                    kotlinx.coroutines.delay(350)
                                     val direction = if (dragY > 0) SwipeDirection.DOWN else SwipeDirection.UP
                                     onSwiped(direction)
                                     offsetX.snapTo(0f)
