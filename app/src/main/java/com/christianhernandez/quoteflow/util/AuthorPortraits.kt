@@ -4,15 +4,27 @@ package com.christianhernandez.quoteflow.util
  * Wikimedia Commons portrait URLs for known philosophers and authors.
  * Ported from MindScrolling Flutter app's author_avatar.dart.
  * All images are public domain portraits from Wikimedia Commons.
+ *
+ * For authors not in the Wikimedia list, generates a UI Avatars fallback
+ * with the author's initials on a colored background.
  */
 object AuthorPortraits {
 
     /**
-     * Returns a Wikimedia thumbnail URL for the given author name, or null if unknown.
+     * Returns a portrait URL for the given author name.
+     * Uses Wikimedia Commons if available, otherwise generates a UI Avatars fallback.
+     * Never returns null — every author gets a portrait.
      */
-    fun getPortraitUrl(name: String): String? {
+    fun getPortraitUrl(name: String): String {
         val key = name.lowercase().trim()
-        return knownPortraits[key]
+        // Try Wikimedia first
+        knownPortraits[key]?.let { return it }
+
+        // Fallback: generate avatar with UI Avatars API
+        val encodedName = java.net.URLEncoder.encode(name, "UTF-8")
+        val colors = listOf("3B82F6", "10B981", "F97316", "8B5CF6", "6366F1", "EF4444")
+        val bgColor = colors[name.length % colors.size]
+        return "https://ui-avatars.com/api/?name=$encodedName&size=200&background=$bgColor&color=fff&bold=true&font-size=0.4&rounded=true"
     }
 
     // Wikimedia Commons thumbnails (public domain portraits)

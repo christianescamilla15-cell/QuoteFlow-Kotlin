@@ -1,9 +1,5 @@
 package com.christianhernandez.quoteflow.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,10 +17,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.christianhernandez.quoteflow.data.model.Quote
-import com.christianhernandez.quoteflow.ui.theme.StoicismColor
 import com.christianhernandez.quoteflow.util.AuthorPortraits
 
 /**
@@ -53,9 +44,7 @@ fun AuthorDetailSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val portraitUrl = AuthorPortraits.getPortraitUrl(authorName)
-    val initial = if (authorName.isNotEmpty()) authorName[0].uppercase() else "?"
     val bio = getAuthorBio(authorName, language)
-    var imageFailed by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -70,41 +59,20 @@ fun AuthorDetailSheet(
                 .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Author photo (large)
+            // Author photo (large — always available via Wikimedia or UI Avatars)
             item {
-                if (portraitUrl != null && !imageFailed) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(portraitUrl)
-                            .crossfade(true)
-                            .addHeader("User-Agent", "QuoteFlow/1.0 (Android)")
-                            .build(),
-                        contentDescription = authorName,
-                        contentScale = ContentScale.Crop,
-                        onError = { imageFailed = true },
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape),
-                    )
-                }
-                if (portraitUrl == null || imageFailed) {
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .background(
-                                StoicismColor.copy(alpha = 0.12f),
-                                CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = initial,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = StoicismColor,
-                        )
-                    }
-                }
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(portraitUrl)
+                        .crossfade(true)
+                        .addHeader("User-Agent", "QuoteFlow/1.0 (Android)")
+                        .build(),
+                    contentDescription = authorName,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape),
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 

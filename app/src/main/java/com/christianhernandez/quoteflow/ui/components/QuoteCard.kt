@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
@@ -27,10 +26,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -89,10 +84,9 @@ fun QuoteCard(
     val maxOffset = maxOf(absX, absY)
     val swipeIndicatorAlpha = (maxOffset / 300f).coerceIn(0f, 0.3f)
 
-    // Author portrait URL and translated name
+    // Author portrait URL (never null — Wikimedia or UI Avatars fallback)
     val portraitUrl = AuthorPortraits.getPortraitUrl(quote.author)
     val displayAuthor = AuthorTranslations.translate(quote.author, language)
-    val authorInitial = if (displayAuthor.isNotEmpty()) displayAuthor[0].uppercase() else "?"
 
     // Translate category for display
     val displayCategory = when {
@@ -105,9 +99,6 @@ fun QuoteCard(
         }
         else -> quote.category.replaceFirstChar { it.uppercase() }
     }
-
-    // Image loading state
-    var imageFailed by remember { mutableStateOf(false) }
 
     // Solid card background with subtle category color gradient — fully opaque, 3D feel
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -154,55 +145,27 @@ fun QuoteCard(
                 modifier = Modifier.padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Large author photo
-                if (portraitUrl != null && !imageFailed) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(portraitUrl)
-                            .crossfade(true)
-                            .addHeader("User-Agent", "QuoteFlow/1.0 (Android)")
-                            .build(),
-                        contentDescription = displayAuthor,
-                        contentScale = ContentScale.Crop,
-                        onError = { imageFailed = true },
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .border(3.dp, categoryColor, RoundedCornerShape(16.dp))
-                            .then(
-                                if (onAuthorClick != null) {
-                                    Modifier.clickable(onClick = onAuthorClick)
-                                } else {
-                                    Modifier
-                                }
-                            ),
-                    )
-                }
-                if (portraitUrl == null || imageFailed) {
-                    // Fallback: initial letter in colored rounded rectangle
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(categoryColor.copy(alpha = 0.12f))
-                            .border(3.dp, categoryColor, RoundedCornerShape(16.dp))
-                            .then(
-                                if (onAuthorClick != null) {
-                                    Modifier.clickable(onClick = onAuthorClick)
-                                } else {
-                                    Modifier
-                                }
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = authorInitial,
-                            fontSize = 48.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = categoryColor,
-                        )
-                    }
-                }
+                // Large author photo (always available — Wikimedia or UI Avatars fallback)
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(portraitUrl)
+                        .crossfade(true)
+                        .addHeader("User-Agent", "QuoteFlow/1.0 (Android)")
+                        .build(),
+                    contentDescription = displayAuthor,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(3.dp, categoryColor, RoundedCornerShape(16.dp))
+                        .then(
+                            if (onAuthorClick != null) {
+                                Modifier.clickable(onClick = onAuthorClick)
+                            } else {
+                                Modifier
+                            }
+                        ),
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -242,11 +205,11 @@ fun QuoteCard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Opening decorative quote mark
+                // Opening decorative quote mark (subtle)
                 Text(
                     text = "\u275D",
                     fontSize = 60.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                     lineHeight = 60.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -254,24 +217,43 @@ fun QuoteCard(
                     textAlign = TextAlign.Start,
                 )
 
-                // Quote text — serif italic, elegant
-                Text(
-                    text = quote.text,
-                    fontFamily = FontFamily.Serif,
-                    fontStyle = FontStyle.Italic,
-                    fontSize = 18.sp,
-                    lineHeight = (18 * 1.7).sp,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    letterSpacing = 0.3.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
+                // Quote text — gothic drop cap + elegant serif
+                val firstLetter = quote.text.firstOrNull()?.toString() ?: ""
+                val restOfText = if (quote.text.length > 1) quote.text.substring(1) else ""
 
-                // Closing decorative quote mark
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                ) {
+                    // Drop cap — large gothic-style first letter
+                    Text(
+                        text = firstLetter,
+                        fontFamily = FontFamily.Serif,
+                        fontSize = 56.sp,
+                        lineHeight = 56.sp,
+                        fontWeight = FontWeight.Black,
+                        color = categoryColor.copy(alpha = 0.8f),
+                        modifier = Modifier
+                            .alignByBaseline()
+                            .padding(end = 4.dp, top = 0.dp),
+                    )
+                    // Rest of the text — elegant serif italic
+                    Text(
+                        text = restOfText,
+                        fontFamily = FontFamily.Serif,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 17.sp,
+                        lineHeight = 28.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        letterSpacing = 0.2.sp,
+                        modifier = Modifier.alignByBaseline(),
+                    )
+                }
+
+                // Closing decorative quote mark (subtle)
                 Text(
                     text = "\u275E",
                     fontSize = 60.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                     lineHeight = 60.sp,
                     modifier = Modifier
                         .fillMaxWidth()
