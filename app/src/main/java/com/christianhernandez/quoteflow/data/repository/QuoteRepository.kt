@@ -282,10 +282,10 @@ class QuoteRepository(
     /**
      * Get preview quotes for a pack.
      */
-    suspend fun getPackPreview(packId: String): PackPreviewResponse? {
+    suspend fun getPackPreview(packId: String, lang: String = "en"): PackPreviewResponse? {
         if (apiService != null) {
             try {
-                return apiService.getPackPreview(packId)
+                return apiService.getPackPreview(packId, lang)
             } catch (_: Exception) {
                 // Fallback
             }

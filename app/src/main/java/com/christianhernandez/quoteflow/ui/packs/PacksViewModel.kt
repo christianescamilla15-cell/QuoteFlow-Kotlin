@@ -77,8 +77,9 @@ class PacksViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingPreview = true, previewPackId = packId) }
             try {
-                val response = repository.getPackPreview(packId)
-                val quotes = response?.data?.map { apiQuote ->
+                val lang = if (java.util.Locale.getDefault().language == "es") "es" else "en"
+                val response = repository.getPackPreview(packId, lang)
+                val quotes = response?.quotes?.map { apiQuote ->
                     Quote(
                         id = apiQuote.id,
                         text = apiQuote.text,

@@ -120,7 +120,7 @@ data class PackApi(
     val access_status: String?,
 )
 
-data class PackPreviewResponse(val data: List<QuoteApiModel>)
+data class PackPreviewResponse(val quotes: List<QuoteApiModel>, val pack: PackApi?, val is_preview_complete: Boolean?)
 
 data class PackFeedResponse(
     val data: List<QuoteApiModel>,

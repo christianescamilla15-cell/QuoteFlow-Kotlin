@@ -54,7 +54,7 @@ interface ApiService {
     suspend fun getPacks(): PacksResponse
 
     @GET("packs/{id}/preview")
-    suspend fun getPackPreview(@Path("id") id: String): PackPreviewResponse
+    suspend fun getPackPreview(@Path("id") id: String, @Query("lang") lang: String = "en"): PackPreviewResponse
 
     @GET("packs/{id}/feed")
     suspend fun getPackFeed(
