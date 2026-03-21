@@ -30,6 +30,7 @@ fun SwipeableCard(
     modifier: Modifier = Modifier,
     onSwiped: (SwipeDirection) -> Unit,
     onDoubleTap: (() -> Unit)? = null,
+    onDragUpdate: ((Float, Float) -> Unit)? = null,
     swipeThresholdDp: Float = 100f,
     content: @Composable (offsetX: Float, offsetY: Float) -> Unit,
 ) {
@@ -68,6 +69,7 @@ fun SwipeableCard(
                             offsetX.snapTo(dragX)
                             offsetY.snapTo(dragY)
                         }
+                        onDragUpdate?.invoke(dragX, dragY)
                     },
                     onDragEnd = {
                         scope.launch {
@@ -100,6 +102,7 @@ fun SwipeableCard(
                                     launch { offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium)) }
                                 }
                             }
+                            onDragUpdate?.invoke(0f, 0f)
                         }
                     },
                     onDragCancel = {
@@ -107,6 +110,7 @@ fun SwipeableCard(
                             launch { offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium)) }
                             launch { offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium)) }
                         }
+                        onDragUpdate?.invoke(0f, 0f)
                     }
                 )
             }

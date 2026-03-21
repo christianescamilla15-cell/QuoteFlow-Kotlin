@@ -82,7 +82,8 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
             try {
                 val quotes = repository.getFeed(lang)
                 if (quotes.isNotEmpty()) {
-                    val queue = quotes.toMutableList()
+                    val balanced = balanceFeed(quotes)
+                    val queue = balanced.toMutableList()
                     val current = queue.removeFirstOrNull()
                     val next = queue.removeFirstOrNull()
                     _uiState.update {
@@ -109,6 +110,33 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
                 }
             }
         }
+    }
+
+    /**
+     * Balance the feed: ensure ~5 quotes per category so there is always
+     * a quote for each swipe direction. Shuffled so categories are mixed.
+     */
+    private fun balanceFeed(quotes: List<Quote>): List<Quote> {
+        val byCategory = quotes.groupBy { it.category }
+        val categories = listOf("stoicism", "discipline", "reflection", "philosophy")
+        val balanced = mutableListOf<Quote>()
+        val perCategory = 5
+
+        // Take up to 5 from each category
+        for (cat in categories) {
+            val catQuotes = byCategory[cat] ?: emptyList()
+            balanced.addAll(catQuotes.take(perCategory))
+        }
+
+        // If we don't have enough from some categories, fill with remaining
+        if (balanced.size < 20) {
+            val usedIds = balanced.map { it.id }.toSet()
+            val remaining = quotes.filter { it.id !in usedIds }
+            balanced.addAll(remaining.take(20 - balanced.size))
+        }
+
+        // Shuffle to mix categories (not all stoicism then all discipline)
+        return balanced.shuffled()
     }
 
     fun onSwipe(direction: SwipeDirection) {
@@ -216,16 +244,37 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
             val newCurrent = state.nextQuote
             val newNext = queue.removeFirstOrNull()
 
-            // If queue is running low, reload
-            if (queue.size <= 2) {
+            // If queue is running low (< 5 quotes), fetch more
+            if (queue.size < 5) {
                 viewModelScope.launch {
                     try {
                         val moreQuotes = repository.getFeed(currentLang)
-                        _uiState.update { it.copy(feedQueue = it.feedQueue + moreQuotes) }
+                        val balanced = balanceFeed(moreQuotes)
+                        _uiState.update { current ->
+                            // If currentQuote became null (empty queue), populate it
+                            if (current.currentQuote == null && balanced.isNotEmpty()) {
+                                val refillQueue = balanced.toMutableList()
+                                val fillCurrent = refillQueue.removeFirstOrNull()
+                                val fillNext = refillQueue.removeFirstOrNull()
+                                current.copy(
+                                    currentQuote = fillCurrent,
+                                    nextQuote = fillNext,
+                                    feedQueue = current.feedQueue + refillQueue,
+                                    currentCardAppearedAt = System.currentTimeMillis(),
+                                )
+                            } else {
+                                current.copy(feedQueue = current.feedQueue + balanced)
+                            }
+                        }
                     } catch (_: Exception) {
                         // Silently fail; user can keep swiping existing queue
                     }
                 }
+            }
+
+            // If newCurrent is null (queue was exhausted), trigger a full reload
+            if (newCurrent == null) {
+                viewModelScope.launch { loadFeed(currentLang) }
             }
 
             state.copy(

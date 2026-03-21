@@ -6,7 +6,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,8 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.SwipeLeft
-import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -40,10 +37,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -61,6 +62,8 @@ fun FeedScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var currentDragX by remember { mutableFloatStateOf(0f) }
+    var currentDragY by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(language) {
         viewModel.loadFeed(language)
@@ -225,10 +228,14 @@ fun FeedScreen(
 
                     // Current swipeable card
                     uiState.currentQuote?.let { quote ->
-                        Box {
+                        Box(modifier = Modifier.fillMaxSize()) {
                             SwipeableCard(
                                 onSwiped = { direction -> viewModel.onSwipe(direction) },
                                 onDoubleTap = { viewModel.onDoubleTapLike() },
+                                onDragUpdate = { dx, dy ->
+                                    currentDragX = dx
+                                    currentDragY = dy
+                                },
                             ) { offsetX, offsetY ->
                                 QuoteCard(
                                     quote = quote,
@@ -254,6 +261,60 @@ fun FeedScreen(
                                     },
                                 )
                             }
+
+                            // Dynamic direction overlays based on drag
+                            val threshold = 100f
+                            val absX = kotlin.math.abs(currentDragX)
+                            val absY = kotlin.math.abs(currentDragY)
+
+                            // UP indicator — Wisdom / Sabiduria
+                            if (currentDragY < -20f && absY > absX) {
+                                val alpha = (kotlin.math.abs(currentDragY) / threshold).coerceIn(0f, 1f)
+                                DirectionOverlay(
+                                    text = if (language == "es") "Sabiduría" else "Wisdom",
+                                    arrow = "\u2191",
+                                    color = Color(0xFF3B82F6),
+                                    alpha = alpha,
+                                    alignment = Alignment.TopCenter,
+                                )
+                            }
+
+                            // DOWN indicator — Philosophy / Filosofia
+                            if (currentDragY > 20f && absY > absX) {
+                                val alpha = (currentDragY / threshold).coerceIn(0f, 1f)
+                                DirectionOverlay(
+                                    text = if (language == "es") "Filosofía" else "Philosophy",
+                                    arrow = "\u2193",
+                                    color = Color(0xFF8B5CF6),
+                                    alpha = alpha,
+                                    alignment = Alignment.BottomCenter,
+                                )
+                            }
+
+                            // RIGHT indicator — Discipline / Disciplina
+                            if (currentDragX > 20f && absX > absY) {
+                                val alpha = (currentDragX / threshold).coerceIn(0f, 1f)
+                                DirectionOverlay(
+                                    text = if (language == "es") "Disciplina" else "Discipline",
+                                    arrow = "\u2192",
+                                    color = Color(0xFF10B981),
+                                    alpha = alpha,
+                                    alignment = Alignment.CenterEnd,
+                                )
+                            }
+
+                            // LEFT indicator — Reflection / Reflexion
+                            if (currentDragX < -20f && absX > absY) {
+                                val alpha = (kotlin.math.abs(currentDragX) / threshold).coerceIn(0f, 1f)
+                                DirectionOverlay(
+                                    text = if (language == "es") "Reflexión" else "Reflection",
+                                    arrow = "\u2190",
+                                    color = Color(0xFFF97316),
+                                    alpha = alpha,
+                                    alignment = Alignment.CenterStart,
+                                )
+                            }
+
                             // Like animation on double-tap
                             androidx.compose.animation.AnimatedVisibility(
                                 visible = uiState.showLikeAnimation,
@@ -270,56 +331,6 @@ fun FeedScreen(
                         }
                     }
                 }
-            }
-        }
-
-        // Swipe direction hints
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Left hint — Reflection
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "←", style = MaterialTheme.typography.labelMedium, color = Color(0xFFF97316).copy(alpha = 0.6f))
-                Text(
-                    text = if (language == "es") "Reflexión" else "Reflection",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFF97316).copy(alpha = 0.5f),
-                )
-            }
-            // Center — Up (Stoicism) + Down (Philosophy)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "↑", style = MaterialTheme.typography.labelMedium, color = Color(0xFF3B82F6).copy(alpha = 0.6f))
-                Text(
-                    text = if (language == "es") "Sabiduría" else "Wisdom",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF3B82F6).copy(alpha = 0.5f),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (language == "es") "Desliza en 4 direcciones" else "Swipe in 4 directions",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (language == "es") "Filosofía" else "Philosophy",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF8B5CF6).copy(alpha = 0.5f),
-                )
-                Text(text = "↓", style = MaterialTheme.typography.labelMedium, color = Color(0xFF8B5CF6).copy(alpha = 0.6f))
-            }
-            // Right hint — Discipline
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "→", style = MaterialTheme.typography.labelMedium, color = Color(0xFF10B981).copy(alpha = 0.6f))
-                Text(
-                    text = if (language == "es") "Disciplina" else "Discipline",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF10B981).copy(alpha = 0.5f),
-                )
             }
         }
 
@@ -385,6 +396,40 @@ private fun PaywallCard(
             ) {
                 Text(if (language == "es") "Continuar gratis" else "Continue free")
             }
+        }
+    }
+}
+
+@Composable
+private fun DirectionOverlay(
+    text: String,
+    arrow: String,
+    color: Color,
+    alpha: Float,
+    alignment: Alignment,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = alignment,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.alpha(alpha),
+        ) {
+            Text(
+                text = arrow,
+                fontSize = 48.sp,
+                color = color,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = text,
+                fontSize = 20.sp,
+                color = color,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
