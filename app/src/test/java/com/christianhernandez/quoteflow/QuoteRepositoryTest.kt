@@ -191,4 +191,9 @@ class FakeQuoteDao : QuoteDao {
     override suspend fun getByCategory(category: String, lang: String, limit: Int): List<Quote> {
         return quotes.filter { it.category == category && it.lang == lang }.take(limit)
     }
+
+    override suspend fun deleteAllNonSaved() {
+        quotes.removeAll { !it.isSaved }
+        emitUpdate()
+    }
 }

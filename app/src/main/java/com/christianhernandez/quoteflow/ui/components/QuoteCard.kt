@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,7 +44,9 @@ import kotlin.math.abs
 fun QuoteCard(
     quote: Quote,
     offsetX: Float = 0f,
+    offsetY: Float = 0f,
     onSaveClick: () -> Unit,
+    onShareClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val categoryColor = when (QuoteCategory.fromString(quote.category)) {
@@ -52,9 +56,18 @@ fun QuoteCard(
         QuoteCategory.REFLECTION -> ReflectionColor
     }
 
-    // Swipe indicators: show green tint for right (save), red tint for left (skip)
-    val swipeIndicatorAlpha = (abs(offsetX) / 300f).coerceIn(0f, 0.3f)
-    val swipeColor = if (offsetX > 0) SaveGreen else SkipRed
+    // Determine swipe overlay color based on dominant direction
+    val absX = abs(offsetX)
+    val absY = abs(offsetY)
+    val swipeColor = when {
+        absX > absY && offsetX > 0 -> SaveGreen // right = save/discipline
+        absX > absY && offsetX < 0 -> ReflectionColor // left = reflection
+        absY > absX && offsetY < 0 -> StoicismColor // up = stoicism
+        absY > absX && offsetY > 0 -> PhilosophyColor // down = philosophy
+        else -> SaveGreen
+    }
+    val maxOffset = maxOf(absX, absY)
+    val swipeIndicatorAlpha = (maxOffset / 300f).coerceIn(0f, 0.3f)
 
     Card(
         modifier = modifier
@@ -68,7 +81,7 @@ fun QuoteCard(
     ) {
         Box {
             // Swipe color overlay
-            if (abs(offsetX) > 20f) {
+            if (maxOffset > 20f) {
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -131,7 +144,7 @@ fun QuoteCard(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Save button
+                // Action buttons: Save + Share
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -142,6 +155,15 @@ fun QuoteCard(
                             contentDescription = if (quote.isSaved) "Unsave" else "Save",
                             tint = if (quote.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(28.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    IconButton(onClick = onShareClick) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }

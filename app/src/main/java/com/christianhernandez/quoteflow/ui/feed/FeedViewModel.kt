@@ -22,6 +22,7 @@ data class FeedUiState(
     val savedCount: Int = 0,
     val feedQueue: List<Quote> = emptyList(),
     val currentCardAppearedAt: Long = 0L,
+    val showPaywall: Boolean = false,
 )
 
 class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
@@ -114,9 +115,11 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
 
             loadNextQuote()
             _uiState.update {
+                val newCount = it.swipeCount + 1
                 it.copy(
-                    swipeCount = it.swipeCount + 1,
+                    swipeCount = newCount,
                     currentCardAppearedAt = System.currentTimeMillis(),
+                    showPaywall = newCount == 20 && !it.showPaywall,
                 )
             }
         }
@@ -137,6 +140,10 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
 
     fun retry() {
         loadFeed(currentLang)
+    }
+
+    fun dismissPaywall() {
+        _uiState.update { it.copy(showPaywall = false) }
     }
 
     private fun loadNextQuote() {

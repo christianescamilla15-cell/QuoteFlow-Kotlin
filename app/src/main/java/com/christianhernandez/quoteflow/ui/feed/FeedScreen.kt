@@ -1,8 +1,10 @@
 package com.christianhernandez.quoteflow.ui.feed
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,14 +16,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwipeLeft
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,35 +42,62 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.christianhernandez.quoteflow.ui.components.QuoteCard
 import com.christianhernandez.quoteflow.ui.components.SwipeableCard
 
+private const val SOFT_PAYWALL_THRESHOLD = 20
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     viewModel: FeedViewModel,
     language: String,
+    isPremium: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(language) {
         viewModel.loadFeed(language)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Top bar
+        // Top bar with swipe counter
         TopAppBar(
             title = {
-                Text(
-                    text = "QuoteFlow",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "QuoteFlow",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    // Swipe counter
+                    if (uiState.swipeCount > 0) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                text = "${uiState.swipeCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
             },
             actions = {
+                com.christianhernandez.quoteflow.ui.ambient.AmbientAudioButton()
                 BadgedBox(
                     badge = {
                         if (uiState.savedCount > 0) {
@@ -94,6 +127,14 @@ fun FeedScreen(
             contentAlignment = Alignment.Center,
         ) {
             when {
+                // Soft paywall check
+                !isPremium && uiState.swipeCount >= SOFT_PAYWALL_THRESHOLD && uiState.showPaywall -> {
+                    PaywallCard(
+                        language = language,
+                        onDismiss = { viewModel.dismissPaywall() },
+                    )
+                }
+
                 // Cold start / connecting state
                 uiState.isConnecting -> {
                     Column(
@@ -173,6 +214,7 @@ fun FeedScreen(
                             QuoteCard(
                                 quote = nextQuote,
                                 onSaveClick = { },
+                                onShareClick = { },
                                 modifier = Modifier
                                     .alpha(0.5f)
                                     .padding(top = 16.dp),
@@ -184,11 +226,28 @@ fun FeedScreen(
                     uiState.currentQuote?.let { quote ->
                         SwipeableCard(
                             onSwiped = { direction -> viewModel.onSwipe(direction) },
-                        ) { offsetX, _ ->
+                        ) { offsetX, offsetY ->
                             QuoteCard(
                                 quote = quote,
                                 offsetX = offsetX,
+                                offsetY = offsetY,
                                 onSaveClick = { viewModel.onSave(quote) },
+                                onShareClick = {
+                                    val sendIntent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "\"${quote.text}\" -- ${quote.author}\n\nVia QuoteFlow"
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(
+                                        Intent.createChooser(
+                                            sendIntent,
+                                            if (language == "es") "Compartir frase" else "Share quote"
+                                        )
+                                    )
+                                },
                             )
                         }
                     }
@@ -196,40 +255,131 @@ fun FeedScreen(
             }
         }
 
-        // Swipe hints
+        // Swipe direction hints
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.Center,
+                .padding(horizontal = 24.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Default.SwipeLeft,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(16.dp)
-                    .alpha(0.4f),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+            // Left hint
             Text(
-                text = if (language == "es") "Desliza para explorar" else "Swipe to explore",
+                text = if (language == "es") "Reflexion" else "Reflection",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.SwipeRight,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(16.dp)
-                    .alpha(0.4f),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Center hints
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = if (language == "es") "Estoicismo" else "Stoicism",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SwipeLeft,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .alpha(0.35f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (language == "es") "Desliza" else "Swipe",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Default.SwipeRight,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .alpha(0.35f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = if (language == "es") "Filosofia" else "Philosophy",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                )
+            }
+            // Right hint
+            Text(
+                text = if (language == "es") "Disciplina" else "Discipline",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
             )
         }
 
         Spacer(modifier = Modifier.height(4.dp))
+    }
+}
+
+@Composable
+private fun PaywallCard(
+    language: String,
+    onDismiss: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = if (language == "es") "Sigue explorando!" else "Keep exploring!",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = if (language == "es") {
+                    "Has deslizado 20 frases hoy. Desbloquea deslizadas ilimitadas con MindScrolling Inside."
+                } else {
+                    "You've swiped 20 quotes today. Unlock unlimited swipes with MindScrolling Inside."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "$4.99 / " + if (language == "es") "mes" else "month",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Text(if (language == "es") "Continuar gratis" else "Continue free")
+            }
+        }
     }
 }

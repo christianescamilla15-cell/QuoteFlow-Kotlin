@@ -46,4 +46,19 @@ interface ApiService {
 
     @GET("map")
     suspend fun getPhilosophyMap(): MapResponse
+
+    @POST("map/snapshot")
+    suspend fun saveMapSnapshot(): SnapshotResponse
+
+    @GET("packs")
+    suspend fun getPacks(): PacksResponse
+
+    @GET("packs/{id}/preview")
+    suspend fun getPackPreview(@Path("id") id: String): PackPreviewResponse
+
+    @GET("packs/{id}/feed")
+    suspend fun getPackFeed(
+        @Path("id") id: String,
+        @Query("cursor") cursor: String? = null,
+    ): PackFeedResponse
 }

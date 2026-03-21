@@ -100,3 +100,30 @@ data class MapScores(
     val reflection: Int?,
     val philosophy: Int?,
 )
+
+// Packs
+data class PacksResponse(val data: List<PackApi>)
+
+data class PackApi(
+    val id: String,
+    val name: String,
+    val description: String?,
+    val icon: String?,
+    val price: String?,
+    val entitled: Boolean?,
+    val quote_count: Int?,
+)
+
+data class PackPreviewResponse(val data: List<QuoteApiModel>)
+
+data class PackFeedResponse(
+    val data: List<QuoteApiModel>,
+    val next_cursor: String?,
+    val has_more: Boolean,
+)
+
+// Map Snapshot
+data class SnapshotResponse(
+    val saved: Boolean?,
+    val snapshot: MapScores?,
+)

@@ -24,7 +24,11 @@ data class ProfileUiState(
     val trialActive: Boolean? = null,
     val dailySwipesRemaining: Int? = null,
     val mapScores: MapScores? = null,
+    val mapDelta: MapScores? = null,
     val isLoadingProfile: Boolean = false,
+    val isSavingSnapshot: Boolean = false,
+    val snapshotSaved: Boolean = false,
+    val cacheCleared: Boolean = false,
 )
 
 class ProfileViewModel(private val repository: QuoteRepository) : ViewModel() {
@@ -102,8 +106,13 @@ class ProfileViewModel(private val repository: QuoteRepository) : ViewModel() {
         viewModelScope.launch {
             try {
                 val map = repository.getPhilosophyMap()
-                if (map?.current != null) {
-                    _uiState.update { it.copy(mapScores = map.current) }
+                if (map != null) {
+                    _uiState.update {
+                        it.copy(
+                            mapScores = map.current,
+                            mapDelta = map.delta,
+                        )
+                    }
                 }
             } catch (_: Exception) {
                 // Silently fail
@@ -140,6 +149,34 @@ class ProfileViewModel(private val repository: QuoteRepository) : ViewModel() {
 
     fun updateSwipeCount(count: Int) {
         _uiState.update { it.copy(totalSwipes = count) }
+    }
+
+    fun saveSnapshot() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingSnapshot = true, snapshotSaved = false) }
+            try {
+                val result = repository.saveMapSnapshot()
+                _uiState.update {
+                    it.copy(
+                        isSavingSnapshot = false,
+                        snapshotSaved = result?.saved == true || result != null,
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isSavingSnapshot = false) }
+            }
+        }
+    }
+
+    fun clearCache() {
+        viewModelScope.launch {
+            try {
+                repository.clearCache()
+                _uiState.update { it.copy(cacheCleared = true) }
+            } catch (_: Exception) {
+                // Silently fail
+            }
+        }
     }
 
     class Factory(private val repository: QuoteRepository) : ViewModelProvider.Factory {

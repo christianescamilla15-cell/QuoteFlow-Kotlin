@@ -34,4 +34,7 @@ interface QuoteDao {
 
     @Query("SELECT * FROM quotes WHERE category = :category AND lang = :lang ORDER BY RANDOM() LIMIT :limit")
     suspend fun getByCategory(category: String, lang: String, limit: Int = 10): List<Quote>
+
+    @Query("DELETE FROM quotes WHERE isSaved = 0")
+    suspend fun deleteAllNonSaved()
 }

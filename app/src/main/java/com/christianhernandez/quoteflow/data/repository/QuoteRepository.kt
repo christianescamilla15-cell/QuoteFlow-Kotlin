@@ -11,6 +11,10 @@ import com.christianhernandez.quoteflow.data.remote.ProfileResponse
 import com.christianhernandez.quoteflow.data.remote.ProfileRequest
 import com.christianhernandez.quoteflow.data.remote.PremiumStatusResponse
 import com.christianhernandez.quoteflow.data.remote.MapResponse
+import com.christianhernandez.quoteflow.data.remote.PacksResponse
+import com.christianhernandez.quoteflow.data.remote.PackPreviewResponse
+import com.christianhernandez.quoteflow.data.remote.PackFeedResponse
+import com.christianhernandez.quoteflow.data.remote.SnapshotResponse
 import com.christianhernandez.quoteflow.data.remote.VaultItemApi
 import kotlinx.coroutines.flow.Flow
 
@@ -245,5 +249,68 @@ class QuoteRepository(
 
     suspend fun getByCategory(category: String, lang: String): List<Quote> {
         return quoteDao.getByCategory(category, lang)
+    }
+
+    /**
+     * Save a philosophy map snapshot via API.
+     */
+    suspend fun saveMapSnapshot(): SnapshotResponse? {
+        if (apiService != null) {
+            try {
+                return apiService.saveMapSnapshot()
+            } catch (_: Exception) {
+                // Fallback
+            }
+        }
+        return null
+    }
+
+    /**
+     * Get available packs from API.
+     */
+    suspend fun getPacks(): PacksResponse? {
+        if (apiService != null) {
+            try {
+                return apiService.getPacks()
+            } catch (_: Exception) {
+                // Fallback
+            }
+        }
+        return null
+    }
+
+    /**
+     * Get preview quotes for a pack.
+     */
+    suspend fun getPackPreview(packId: String): PackPreviewResponse? {
+        if (apiService != null) {
+            try {
+                return apiService.getPackPreview(packId)
+            } catch (_: Exception) {
+                // Fallback
+            }
+        }
+        return null
+    }
+
+    /**
+     * Get full feed for an entitled pack.
+     */
+    suspend fun getPackFeed(packId: String, cursor: String? = null): PackFeedResponse? {
+        if (apiService != null) {
+            try {
+                return apiService.getPackFeed(packId, cursor)
+            } catch (_: Exception) {
+                // Fallback
+            }
+        }
+        return null
+    }
+
+    /**
+     * Clear all cached quotes from Room database.
+     */
+    suspend fun clearCache() {
+        quoteDao.deleteAllNonSaved()
     }
 }

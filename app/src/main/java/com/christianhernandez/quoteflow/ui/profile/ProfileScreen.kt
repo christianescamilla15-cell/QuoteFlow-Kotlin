@@ -1,6 +1,8 @@
 package com.christianhernandez.quoteflow.ui.profile
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,21 +17,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.SwipeRight
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -40,10 +46,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.christianhernandez.quoteflow.data.remote.MapScores
 import com.christianhernandez.quoteflow.ui.theme.DisciplineColor
 import com.christianhernandez.quoteflow.ui.theme.PhilosophyColor
 import com.christianhernandez.quoteflow.ui.theme.ReflectionColor
@@ -58,6 +68,7 @@ fun ProfileScreen(
     onLanguageChange: (String) -> Unit,
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit,
+    onLogout: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -118,7 +129,7 @@ fun ProfileScreen(
                 )
             }
 
-            // Philosophy Map section
+            // Philosophy Map section with radar chart
             if (uiState.mapScores != null) {
                 Spacer(modifier = Modifier.height(28.dp))
 
@@ -135,31 +146,69 @@ fun ProfileScreen(
                         containerColor = MaterialTheme.colorScheme.surface,
                     ),
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        // Radar chart
                         val scores = uiState.mapScores!!
-                        MapScoreRow(
+                        val delta = uiState.mapDelta
+                        PhilosophyRadarChart(scores = scores)
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Score rows with delta arrows
+                        ScoreRowWithDelta(
                             label = if (language == "es") "Sabiduria" else "Wisdom",
                             score = scores.wisdom ?: 0,
+                            delta = delta?.wisdom,
                             color = StoicismColor,
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        MapScoreRow(
+                        Spacer(modifier = Modifier.height(6.dp))
+                        ScoreRowWithDelta(
                             label = if (language == "es") "Disciplina" else "Discipline",
                             score = scores.discipline ?: 0,
+                            delta = delta?.discipline,
                             color = DisciplineColor,
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        MapScoreRow(
+                        Spacer(modifier = Modifier.height(6.dp))
+                        ScoreRowWithDelta(
                             label = if (language == "es") "Reflexion" else "Reflection",
                             score = scores.reflection ?: 0,
+                            delta = delta?.reflection,
                             color = ReflectionColor,
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        MapScoreRow(
+                        Spacer(modifier = Modifier.height(6.dp))
+                        ScoreRowWithDelta(
                             label = if (language == "es") "Filosofia" else "Philosophy",
                             score = scores.philosophy ?: 0,
+                            delta = delta?.philosophy,
                             color = PhilosophyColor,
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Save snapshot button
+                        OutlinedButton(
+                            onClick = { viewModel.saveSnapshot() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !uiState.isSavingSnapshot,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (uiState.snapshotSaved) {
+                                    if (language == "es") "Snapshot guardado!" else "Snapshot saved!"
+                                } else {
+                                    if (language == "es") "Guardar snapshot" else "Save snapshot"
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -201,12 +250,18 @@ fun ProfileScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
                                 selected = language == "en",
-                                onClick = { onLanguageChange("en") },
+                                onClick = {
+                                    onLanguageChange("en")
+                                    viewModel.updateProfile(preferredLanguage = "en")
+                                },
                                 label = { Text("EN") },
                             )
                             FilterChip(
                                 selected = language == "es",
-                                onClick = { onLanguageChange("es") },
+                                onClick = {
+                                    onLanguageChange("es")
+                                    viewModel.updateProfile(preferredLanguage = "es")
+                                },
                                 label = { Text("ES") },
                             )
                         }
@@ -235,6 +290,73 @@ fun ProfileScreen(
                             checked = isDarkMode,
                             onCheckedChange = onToggleDarkMode,
                         )
+                    }
+
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+                    // Clear cache
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteSweep,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = if (language == "es") "Limpiar cache" else "Clear Cache",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedButton(
+                            onClick = { viewModel.clearCache() },
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(
+                                text = if (uiState.cacheCleared) {
+                                    if (language == "es") "Limpiado!" else "Cleared!"
+                                } else {
+                                    if (language == "es") "Limpiar" else "Clear"
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+                    // Logout / Reset device ID
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = if (language == "es") "Cerrar sesion" else "Logout",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedButton(
+                            onClick = onLogout,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                        ) {
+                            Text(
+                                text = if (language == "es") "Salir" else "Logout",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                     }
                 }
             }
@@ -288,6 +410,12 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "github.com/christianhernandez",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -298,38 +426,104 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun MapScoreRow(
+private fun PhilosophyRadarChart(scores: MapScores) {
+    val wisdomColor = StoicismColor
+    val disciplineColor = DisciplineColor
+    val reflectionColor = ReflectionColor
+    val philosophyColor = PhilosophyColor
+
+    val wisdom = (scores.wisdom ?: 0).coerceIn(0, 100) / 100f
+    val discipline = (scores.discipline ?: 0).coerceIn(0, 100) / 100f
+    val reflection = (scores.reflection ?: 0).coerceIn(0, 100) / 100f
+    val philosophy = (scores.philosophy ?: 0).coerceIn(0, 100) / 100f
+
+    val gridColor = Color.Gray.copy(alpha = 0.2f)
+    val fillColor = StoicismColor.copy(alpha = 0.15f)
+    val strokeColor = StoicismColor.copy(alpha = 0.7f)
+
+    Canvas(modifier = Modifier.size(200.dp)) {
+        val cx = size.width / 2
+        val cy = size.height / 2
+        val maxR = size.width / 2 - 16f
+
+        // Draw grid lines (25%, 50%, 75%, 100%)
+        for (scale in listOf(0.25f, 0.5f, 0.75f, 1.0f)) {
+            val r = maxR * scale
+            val path = Path().apply {
+                moveTo(cx, cy - r)          // top (wisdom)
+                lineTo(cx + r, cy)          // right (discipline)
+                lineTo(cx, cy + r)          // bottom (philosophy)
+                lineTo(cx - r, cy)          // left (reflection)
+                close()
+            }
+            drawPath(path, gridColor, style = Stroke(width = 1f))
+        }
+
+        // Draw axes
+        drawLine(gridColor, Offset(cx, cy - maxR), Offset(cx, cy + maxR), strokeWidth = 1f)
+        drawLine(gridColor, Offset(cx - maxR, cy), Offset(cx + maxR, cy), strokeWidth = 1f)
+
+        // Draw data diamond
+        val topY = cy - maxR * wisdom       // wisdom (up)
+        val rightX = cx + maxR * discipline  // discipline (right)
+        val bottomY = cy + maxR * philosophy // philosophy (down)
+        val leftX = cx - maxR * reflection   // reflection (left)
+
+        val dataPath = Path().apply {
+            moveTo(cx, topY)
+            lineTo(rightX, cy)
+            lineTo(cx, bottomY)
+            lineTo(leftX, cy)
+            close()
+        }
+        drawPath(dataPath, fillColor)
+        drawPath(dataPath, strokeColor, style = Stroke(width = 3f))
+
+        // Draw corner dots
+        val dotRadius = 5f
+        drawCircle(wisdomColor, dotRadius, Offset(cx, topY))
+        drawCircle(disciplineColor, dotRadius, Offset(rightX, cy))
+        drawCircle(philosophyColor, dotRadius, Offset(cx, bottomY))
+        drawCircle(reflectionColor, dotRadius, Offset(leftX, cy))
+    }
+}
+
+@Composable
+private fun ScoreRowWithDelta(
     label: String,
     score: Int,
-    color: androidx.compose.ui.graphics.Color,
+    delta: Int?,
+    color: Color,
 ) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "$score",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = color,
             )
+            if (delta != null && delta != 0) {
+                Spacer(modifier = Modifier.width(4.dp))
+                val arrow = if (delta > 0) "+" else ""
+                val deltaColor = if (delta > 0) Color(0xFF4CAF50) else Color(0xFFEF5350)
+                Text(
+                    text = "$arrow$delta",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = deltaColor,
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        LinearProgressIndicator(
-            progress = (score / 100f).coerceIn(0f, 1f),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp)),
-            color = color,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-        )
     }
 }
 
