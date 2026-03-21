@@ -244,31 +244,29 @@ fun FeedScreen(
                         kotlin.math.abs(currentDragX),
                         kotlin.math.abs(currentDragY)
                     ) / 300f).coerceIn(0f, 1f)
-                    // Next card only visible when dragging (starts invisible)
+                    // Next card: shows the quote matching the drag direction
                     val nextCardScale by animateFloatAsState(
                         targetValue = if (dragProgress > 0.05f) 0.90f + (0.08f * dragProgress) else 0.85f,
                         animationSpec = tween(150),
                         label = "next_card_scale",
                     )
                     val nextCardAlpha by animateFloatAsState(
-                        targetValue = if (dragProgress > 0.05f) dragProgress * 0.6f else 0f,
+                        targetValue = if (dragProgress > 0.05f) dragProgress * 0.7f else 0f,
                         animationSpec = tween(150),
                         label = "next_card_alpha",
                     )
 
-                    // Next card preview — ONLY appears when actively dragging
-                    if (nextCardAlpha > 0.01f) {
-                        uiState.nextQuote?.let { nextQuote ->
-                            Box(modifier = Modifier.alpha(nextCardAlpha)) {
-                                QuoteCard(
-                                    quote = nextQuote,
-                                    onSaveClick = { },
-                                    onShareClick = { },
-                                    language = language,
-                                    modifier = Modifier
-                                        .scale(nextCardScale),
-                                )
-                            }
+                    // Show the preview for whichever direction user is dragging
+                    val directionPreview = viewModel.getPreviewForDirection(currentDragX, currentDragY)
+                    if (nextCardAlpha > 0.01f && directionPreview != null) {
+                        Box(modifier = Modifier.alpha(nextCardAlpha)) {
+                            QuoteCard(
+                                quote = directionPreview,
+                                onSaveClick = { },
+                                onShareClick = { },
+                                language = language,
+                                modifier = Modifier.scale(nextCardScale),
+                            )
                         }
                     }
 

@@ -17,6 +17,11 @@ import kotlinx.coroutines.launch
 data class FeedUiState(
     val currentQuote: Quote? = null,
     val nextQuote: Quote? = null,
+    // Pre-loaded next quotes per direction so the preview matches the swipe
+    val nextByStoicism: Quote? = null,
+    val nextByDiscipline: Quote? = null,
+    val nextByReflection: Quote? = null,
+    val nextByPhilosophy: Quote? = null,
     val isLoading: Boolean = true,
     val isConnecting: Boolean = false,
     val errorMessage: String? = null,
@@ -68,11 +73,10 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
                     val balanced = balanceFeed(quotes)
                     val queue = balanced.toMutableList()
                     val current = queue.removeFirstOrNull()
-                    val next = queue.removeFirstOrNull()
                     _uiState.update {
                         it.copy(
                             currentQuote = current,
-                            nextQuote = next,
+                            nextQuote = null,
                             feedQueue = queue,
                             isLoading = false,
                             isConnecting = false,
@@ -80,6 +84,7 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
                             currentCardAppearedAt = System.currentTimeMillis(),
                         )
                     }
+                    preloadDirectionPreviews()
                 } else {
                     _uiState.update { it.copy(isLoading = false, isConnecting = false) }
                 }
@@ -120,6 +125,35 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
 
         // Shuffle to mix categories (not all stoicism then all discipline)
         return balanced.shuffled()
+    }
+
+    /**
+     * Pre-loads one quote per direction from the queue so the preview card
+     * already matches the swipe direction. No more abrupt card swap.
+     */
+    private fun preloadDirectionPreviews() {
+        _uiState.update { state ->
+            val queue = state.feedQueue
+            state.copy(
+                nextByStoicism = queue.firstOrNull { it.category == "stoicism" },
+                nextByDiscipline = queue.firstOrNull { it.category == "discipline" },
+                nextByReflection = queue.firstOrNull { it.category == "reflection" },
+                nextByPhilosophy = queue.firstOrNull { it.category == "philosophy" },
+            )
+        }
+    }
+
+    /** Returns the preview quote for the given drag direction */
+    fun getPreviewForDirection(dragX: Float, dragY: Float): Quote? {
+        val state = _uiState.value
+        val absX = kotlin.math.abs(dragX)
+        val absY = kotlin.math.abs(dragY)
+        if (absX < 20f && absY < 20f) return null
+        return if (absY > absX) {
+            if (dragY < 0) state.nextByStoicism else state.nextByPhilosophy
+        } else {
+            if (dragX > 0) state.nextByDiscipline else state.nextByReflection
+        }
     }
 
     fun onSwipe(direction: SwipeDirection) {
@@ -279,10 +313,12 @@ class FeedViewModel(private val repository: QuoteRepository) : ViewModel() {
 
             state.copy(
                 currentQuote = newCurrent,
-                nextQuote = newNext,
+                nextQuote = null,
                 feedQueue = queue,
             )
         }
+        // Re-preload direction previews for the new current card
+        preloadDirectionPreviews()
     }
 
     class Factory(private val repository: QuoteRepository) : ViewModelProvider.Factory {
