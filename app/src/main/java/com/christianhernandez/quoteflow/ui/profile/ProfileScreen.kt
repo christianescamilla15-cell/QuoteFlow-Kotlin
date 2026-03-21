@@ -24,12 +24,10 @@ import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Divider
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -147,25 +145,21 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.weight(1f),
                         )
-                        SingleChoiceSegmentedButtonRow {
-                            SegmentedButton(
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
                                 selected = language == "en",
                                 onClick = { onLanguageChange("en") },
-                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                            ) {
-                                Text("EN")
-                            }
-                            SegmentedButton(
+                                label = { Text("EN") },
+                            )
+                            FilterChip(
                                 selected = language == "es",
                                 onClick = { onLanguageChange("es") },
-                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                            ) {
-                                Text("ES")
-                            }
+                                label = { Text("ES") },
+                            )
                         }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
 
                     // Theme toggle
                     Row(
