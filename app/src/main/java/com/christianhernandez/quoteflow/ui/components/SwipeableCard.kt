@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ import kotlin.math.roundToInt
 fun SwipeableCard(
     modifier: Modifier = Modifier,
     onSwiped: (SwipeDirection) -> Unit,
+    onDoubleTap: (() -> Unit)? = null,
     swipeThresholdDp: Float = 100f,
     content: @Composable (offsetX: Float, offsetY: Float) -> Unit,
 ) {
@@ -46,6 +48,11 @@ fun SwipeableCard(
             .graphicsLayer {
                 rotationZ = offsetX.value / 40f
                 alpha = 1f - (abs(offsetX.value) / (swipeThresholdPx * 3f)).coerceIn(0f, 0.5f)
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = { onDoubleTap?.invoke() }
+                )
             }
             .pointerInput(Unit) {
                 detectDragGestures(

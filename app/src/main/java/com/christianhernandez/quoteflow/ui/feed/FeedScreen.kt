@@ -225,31 +225,48 @@ fun FeedScreen(
 
                     // Current swipeable card
                     uiState.currentQuote?.let { quote ->
-                        SwipeableCard(
-                            onSwiped = { direction -> viewModel.onSwipe(direction) },
-                        ) { offsetX, offsetY ->
-                            QuoteCard(
-                                quote = quote,
-                                offsetX = offsetX,
-                                offsetY = offsetY,
-                                onSaveClick = { viewModel.onSave(quote) },
-                                onShareClick = {
-                                    val sendIntent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            "\"${quote.text}\" -- ${quote.author}\n\nVia QuoteFlow"
+                        Box {
+                            SwipeableCard(
+                                onSwiped = { direction -> viewModel.onSwipe(direction) },
+                                onDoubleTap = { viewModel.onDoubleTapLike() },
+                            ) { offsetX, offsetY ->
+                                QuoteCard(
+                                    quote = quote,
+                                    offsetX = offsetX,
+                                    offsetY = offsetY,
+                                    onSaveClick = { viewModel.onSave(quote) },
+                                    onShareClick = {
+                                        viewModel.onShare(quote)
+                                        val sendIntent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                "\"${quote.text}\" -- ${quote.author}\n\nVia QuoteFlow"
+                                            )
+                                            type = "text/plain"
+                                        }
+                                        context.startActivity(
+                                            Intent.createChooser(
+                                                sendIntent,
+                                                if (language == "es") "Compartir frase" else "Share quote"
+                                            )
                                         )
-                                        type = "text/plain"
-                                    }
-                                    context.startActivity(
-                                        Intent.createChooser(
-                                            sendIntent,
-                                            if (language == "es") "Compartir frase" else "Share quote"
-                                        )
-                                    )
-                                },
-                            )
+                                    },
+                                )
+                            }
+                            // Like animation on double-tap
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = uiState.showLikeAnimation,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier.align(Alignment.Center),
+                            ) {
+                                Text(
+                                    text = "❤️",
+                                    style = MaterialTheme.typography.displayLarge,
+                                    modifier = Modifier.alpha(0.9f),
+                                )
+                            }
                         }
                     }
                 }
