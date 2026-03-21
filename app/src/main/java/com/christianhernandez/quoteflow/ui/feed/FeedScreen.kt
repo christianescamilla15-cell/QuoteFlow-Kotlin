@@ -106,7 +106,7 @@ fun FeedScreen(
 
                 else -> {
                     // Next card preview (behind)
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = uiState.nextQuote != null,
                         enter = fadeIn(),
                         exit = fadeOut(),
